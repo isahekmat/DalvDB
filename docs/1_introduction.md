@@ -26,8 +26,8 @@ but not limited to:
 - search history
 - following list
 
-Also, virtually everything that could be cached on server side has this capability to cache on client device, 
-despite the fact that the user is the owner of the data or not, for example:
+Also, virtually everything that could be cached on server side has this capability to be cached on client device, regardless if the fact 
+that the user is the owner of the data or not, for example:
 - Order history
 - List of follower
 - Timeline
