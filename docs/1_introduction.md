@@ -17,7 +17,7 @@ simple cache anymore, however some part of the data could act as a cache to redu
 server, but DalvDB is not limited to cache.
 
 ## Use Cases
-There are several example of the data that is owned by the user him/her self and might be changed just by the user 
+There are several examples of the data that is owned by the user him/her self and might changed only by the user 
 him/her self. To name some of them:
 - User preferences
 - Shopping card
