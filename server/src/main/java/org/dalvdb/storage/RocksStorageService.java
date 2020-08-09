@@ -68,7 +68,6 @@ public class RocksStorageService implements StorageService {
     }
 
     rocksDB.write(wo, wb);
-    wo.close();
     return true;
   }
 
@@ -127,8 +126,8 @@ public class RocksStorageService implements StorageService {
 
   @Override
   public void close() throws IOException {
-    rocksDB.close();
     wo.close();
+    rocksDB.close();
   }
 
   public void clear() throws RocksDBException, IOException {

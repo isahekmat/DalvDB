@@ -21,9 +21,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.dalvdb.DalvConfig;
 import org.dalvdb.proto.ClientProto;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.rocksdb.RocksDBException;
 
 import java.io.IOException;
@@ -36,17 +34,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class RocksStorageServiceTest {
 
-  private RocksStorageService storageService;
+  private static RocksStorageService storageService;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeClass
+  public static void setUp() {
     DalvConfig.setStr(DalvConfig.DATA_DIR, UUID.randomUUID().toString());
-    this.storageService = new RocksStorageService();
+    storageService = new RocksStorageService();
   }
 
-  @After
-  public void tearDown() throws IOException, RocksDBException {
-    storageService.clear();
+  @AfterClass
+  public static void tearDown() {
+    try {
+      storageService.clear();
+    } catch (RocksDBException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   @Test
@@ -80,22 +84,22 @@ public class RocksStorageServiceTest {
     ClientProto.Operation op1 = ClientProto.Operation.newBuilder()
         .setType(ClientProto.OpType.PUT)
         .setKey("name")
-        .setVal(ByteString.copyFrom("Isa".getBytes()))
+        .setVal(ByteString.copyFrom("ali".getBytes()))
         .build();
     ClientProto.Operation op2 = ClientProto.Operation.newBuilder()
         .setType(ClientProto.OpType.PUT)
         .setKey("fname")
-        .setVal(ByteString.copyFrom("hekmat".getBytes()))
+        .setVal(ByteString.copyFrom("karimin".getBytes()))
         .build();
     ClientProto.Operation op3 = ClientProto.Operation.newBuilder()
         .setType(ClientProto.OpType.PUT)
         .setKey("age")
-        .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(30).array()))
+        .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(32).array()))
         .build();
-    storageService.handlePuts("esa", List.of(op1, op2, op3),0);
-    int snapshotId = storageService.snapshot("esa");
+    storageService.handlePuts("ali", List.of(op1, op2, op3),0);
+    int snapshotId = storageService.snapshot("ali");
     assertThat(snapshotId).isEqualTo(1);
-    List<ClientProto.Operation> ops = storageService.get("esa", snapshotId);
+    List<ClientProto.Operation> ops = storageService.get("ali", snapshotId);
     assertThat(ops).isEmpty();
 
     ClientProto.Operation op4 = ClientProto.Operation.newBuilder()
@@ -103,10 +107,10 @@ public class RocksStorageServiceTest {
         .setKey("age")
         .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(40).array()))
         .build();
-    storageService.handlePuts("esa", Collections.singletonList(op4),snapshotId);
-    int snapshotId2 = storageService.snapshot("esa");
+    storageService.handlePuts("ali", Collections.singletonList(op4),snapshotId);
+    int snapshotId2 = storageService.snapshot("ali");
     assertThat(snapshotId2).isEqualTo(2);
-    List<ClientProto.Operation> ops2 = storageService.get("esa", snapshotId);
+    List<ClientProto.Operation> ops2 = storageService.get("ali", snapshotId);
     assertThat(ops2.size()).isEqualTo(2);
     assertThat(ops2.get(0)).isEqualTo(op4);
     assertThat(ops2.get(1).getType()).isEqualTo(ClientProto.OpType.SNAPSHOT);
