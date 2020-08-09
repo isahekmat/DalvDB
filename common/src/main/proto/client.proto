@@ -1,0 +1,38 @@
+syntax = "proto3";
+option java_package = "org.dalvdb.proto";
+option java_outer_classname = "ClientProto";
+option java_generate_equals_and_hash = true;
+service ClientServer {
+  rpc Sync (SyncRequest) returns (SyncResponse){}
+}
+message SyncRequest {
+  string jwt = 1;
+  repeated Operation ops = 2;
+  uint32 lastSnapshotId = 3;
+}
+
+message SyncResponse {
+  RepType syncResponse = 1;
+  uint32 snapshotId = 2;
+  repeated Operation ops = 3;
+}
+
+message Operation {
+  OpType type = 1;
+  string key = 2;
+  bytes val = 3;
+  uint32 snapshotId = 4;
+}
+
+enum OpType {
+  PUT = 0;
+  DEL = 1;
+  ADD_TO_LIST = 2;
+  SNAPSHOT = 3;
+}
+
+enum RepType {
+  OK = 0;
+  NOK = 1;
+  NOT_AUTHORIZED = 2;
+}
