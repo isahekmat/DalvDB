@@ -75,7 +75,7 @@ public class DalvClient {
   public static void main(String[] args) throws RocksDBException, InvalidProtocolBufferException {
     DalvClient client = new DalvClient("localhost:7472",
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlc2EifQ.Gd3BoQIu3tAX2rxlKsgUMJkG38MbDZxoYmKOQfJ9N4g",
-        "client-data");
+        ".client-data");
 //    client.put("color", "blue".getBytes());
     client.put("theme", "white".getBytes());
     client.sync();
