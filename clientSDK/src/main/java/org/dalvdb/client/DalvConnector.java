@@ -17,17 +17,17 @@
 
 package org.dalvdb.client;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import org.dalvdb.proto.ClientProto;
 import org.dalvdb.proto.ClientServerGrpc;
 
 import java.io.Closeable;
+import java.util.List;
 
 class DalvConnector implements Closeable {
   private final String jwt;
-  private final ClientServerGrpc.ClientServerFutureStub client;
+  private final ClientServerGrpc.ClientServerBlockingStub client;
 
   public DalvConnector(String address, String jwt) {
     this.jwt = jwt;
@@ -35,12 +35,13 @@ class DalvConnector implements Closeable {
     final String host = addressArr[0];
     final int port = Integer.parseInt(addressArr[1]);
     ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
-    client = ClientServerGrpc.newFutureStub(channel);
+    client = ClientServerGrpc.newBlockingStub(channel);
   }
 
-  public ListenableFuture<ClientProto.SyncResponse> sync(final int lastSnapshotId) {
+  public ClientProto.SyncResponse sync(List<ClientProto.Operation> ops, int lastSnapshotId) {
     ClientProto.SyncRequest request = ClientProto.SyncRequest.newBuilder()
         .setLastSnapshotId(lastSnapshotId)
+        .addAllOps(ops)
         .setJwt(jwt)
         .build();
     return client.sync(request);

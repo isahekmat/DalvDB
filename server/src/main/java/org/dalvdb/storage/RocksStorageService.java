@@ -17,15 +17,14 @@
 
 package org.dalvdb.storage;
 
-import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.dalvdb.DalvConfig;
+import org.dalvdb.common.util.ByteUtil;
 import org.dalvdb.proto.ClientProto;
 import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Iterator;
@@ -58,13 +57,11 @@ public class RocksStorageService implements StorageService {
 
   @Override
   public boolean handlePuts(String userId, List<ClientProto.Operation> opsList, int lastSnapshotId) throws RocksDBException {
+    //TODO: check conflict
     byte[] key = userId.getBytes(Charset.defaultCharset());
     WriteBatch wb = new WriteBatch();
     for (ClientProto.Operation operation : opsList) {
-      byte[] oprBytes = operation.toByteArray();
-      byte[] len = ByteBuffer.allocate(4).putInt(oprBytes.length).array();
-      wb.merge(key, len);
-      wb.merge(key, oprBytes);
+      wb.merge(key,ByteUtil.opToByte(operation));
     }
 
     rocksDB.write(wo, wb);
@@ -74,7 +71,7 @@ public class RocksStorageService implements StorageService {
   @Override
   public List<ClientProto.Operation> get(String userId, int lastSnapshotId) throws RocksDBException, InvalidProtocolBufferException {
     byte[] bytes = rocksDB.get(userId.getBytes(Charset.defaultCharset()));
-    LinkedList<ClientProto.Operation> operations = byteToOps(bytes);
+    LinkedList<ClientProto.Operation> operations = ByteUtil.byteToOps(bytes);
     Iterator<ClientProto.Operation> operationIterator = operations.descendingIterator();
     int i = operations.size();
     while (operationIterator.hasNext()) {
@@ -92,11 +89,8 @@ public class RocksStorageService implements StorageService {
     int snapshotId = lastSnapshotId(userId) + 1;
     ClientProto.Operation op = ClientProto.Operation.newBuilder().setType(ClientProto.OpType.SNAPSHOT)
         .setSnapshotId(snapshotId).build();
-    byte[] opBytes = op.toByteArray();
-    byte[] len = ByteBuffer.allocate(4).putInt(opBytes.length).array();
-    WriteBatch wb = new WriteBatch(8 + opBytes.length);
-    wb.merge(userId.getBytes(Charset.defaultCharset()), len);
-    wb.merge(userId.getBytes(Charset.defaultCharset()), opBytes);
+    WriteBatch wb = new WriteBatch(8 + op.toByteArray().length);
+    wb.merge(userId.getBytes(Charset.defaultCharset()),ByteUtil.opToByte(op));
     wb.put((userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()),
         ByteBuffer.allocate(4).putInt(snapshotId).array());
     rocksDB.write(wo, wb);
@@ -110,27 +104,13 @@ public class RocksStorageService implements StorageService {
     return ByteBuffer.wrap(lastSnapShotId).getInt();
   }
 
-  private LinkedList<ClientProto.Operation> byteToOps(byte[] bytes) throws InvalidProtocolBufferException {
-    LinkedList<ClientProto.Operation> ops = new LinkedList<>();
-    int offset = 0;
-    while (offset < bytes.length) {
-      int len = ByteBuffer.wrap(bytes, offset, 4).getInt();
-      offset += 5;
-      ClientProto.Operation op = ClientProto.Operation.parseFrom(ByteString.copyFrom(bytes, offset, len));
-      offset += len;
-      ops.add(op);
-      offset++;
-    }
-    return ops;
-  }
-
   @Override
-  public void close() throws IOException {
+  public void close() {
     wo.close();
     rocksDB.close();
   }
 
-  public void clear() throws RocksDBException, IOException {
+  public void clear() throws RocksDBException {
     close();
     RocksDB.destroyDB(DalvConfig.getStr(DalvConfig.DATA_DIR), new Options());
   }
