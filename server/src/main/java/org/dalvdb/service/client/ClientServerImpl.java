@@ -17,16 +17,15 @@
 
 package org.dalvdb.service.client;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.stub.StreamObserver;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SecurityException;
 import org.dalvdb.DalvConfig;
+import org.dalvdb.exception.InternalServerException;
 import org.dalvdb.lock.UserLockManager;
 import org.dalvdb.proto.ClientProto;
 import org.dalvdb.proto.ClientServerGrpc;
 import org.dalvdb.storage.StorageService;
-import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,8 +55,9 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
     if (Objects.nonNull(userId)) {
       try {
         res = handleSync(userId, request);
-      } catch (RocksDBException | InvalidProtocolBufferException | InterruptedException e) {
+      } catch (InternalServerException e) {
         logger.error(e.getMessage(), e);
+        responseObserver.onError(e);
       }
     } else {
       res = ClientProto.SyncResponse.newBuilder()
@@ -67,39 +67,43 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
     responseObserver.onCompleted();
   }
 
-  private ClientProto.SyncResponse handleSync(String userId, ClientProto.SyncRequest request) throws RocksDBException, InvalidProtocolBufferException, InterruptedException {
+  private ClientProto.SyncResponse handleSync(String userId, ClientProto.SyncRequest request)
+      throws InternalServerException {
     ClientProto.SyncResponse.Builder resBuilder = ClientProto.SyncResponse.newBuilder();
     ReadWriteLock lock = userLockManager.getLock(userId);
-    if (request.getOpsList() != null && request.getOpsList().size() > 0) {
-      Lock writeLock = lock.writeLock();
-      if (writeLock.tryLock(DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT), TimeUnit.MILLISECONDS)) {
-        try {
-          if (storage.handlePuts(userId, request.getOpsList(), request.getLastSnapshotId())) {
-            resBuilder.setSyncResponse(ClientProto.RepType.OK);
-            read(userId, request.getLastSnapshotId(), resBuilder);
-          } else {
-            resBuilder.setSyncResponse(ClientProto.RepType.NOK);
+    try {
+      if (request.getOpsList() != null && request.getOpsList().size() > 0) {
+        Lock writeLock = lock.writeLock();
+        if (writeLock.tryLock(DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT), TimeUnit.MILLISECONDS)) {
+          try {
+            if (storage.handleOperations(userId, request.getOpsList(), request.getLastSnapshotId())) {
+              resBuilder.setSyncResponse(ClientProto.RepType.OK);
+              read(userId, request.getLastSnapshotId(), resBuilder);
+            } else {
+              resBuilder.setSyncResponse(ClientProto.RepType.NOK);
+            }
+          } finally {
+            writeLock.unlock();
           }
-        } finally {
-          writeLock.unlock();
+        }
+      } else {
+        Lock readLock = lock.readLock();
+        if (readLock.tryLock(DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT), TimeUnit.MILLISECONDS)) {
+          try {
+            read(userId, request.getLastSnapshotId(), resBuilder);
+          } finally {
+            readLock.unlock();
+          }
         }
       }
-    } else {
-      Lock readLock = lock.readLock();
-      if (readLock.tryLock(DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT), TimeUnit.MILLISECONDS)) {
-        try {
-          read(userId, request.getLastSnapshotId(), resBuilder);
-        } finally {
-          readLock.unlock();
-        }
-      }
+    } catch (InterruptedException e) {
+      throw new InternalServerException(e);
     }
     return resBuilder.build();
   }
 
   private void read(String userId, int lastSnapshotId,
-                    ClientProto.SyncResponse.Builder responseBuilder)
-      throws InvalidProtocolBufferException, RocksDBException {
+                    ClientProto.SyncResponse.Builder responseBuilder) {
     List<ClientProto.Operation> ops = storage.get(userId, lastSnapshotId);
     responseBuilder.addAllOps(ops);
     if (ops.isEmpty()) {

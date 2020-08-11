@@ -39,7 +39,7 @@ public class ClientService implements Closeable {
     try {
       server.start();
     } catch (IOException e) {
-      logger.error(e.getMessage(), e);
+      logger.error("Starting server failed", e);
       System.exit(1);
     }
     logger.info("Server started, listening on " + port);

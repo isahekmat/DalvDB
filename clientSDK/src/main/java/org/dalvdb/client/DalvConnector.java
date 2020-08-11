@@ -49,7 +49,6 @@ class DalvConnector implements Closeable {
 
   @Override
   public void close() {
-
   }
 
 }

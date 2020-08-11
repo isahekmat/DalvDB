@@ -18,9 +18,7 @@
 package org.dalvdb.client;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.dalvdb.proto.ClientProto;
-import org.rocksdb.RocksDBException;
 
 public class DalvClient {
   private final String[] addressArr;
@@ -30,17 +28,16 @@ public class DalvClient {
   private final Storage storage;
   private final Object syncLock = new Object();
 
-  public DalvClient(String serverAddresses, String accessToken, String dataDir) throws RocksDBException {
+  public DalvClient(String serverAddresses, String accessToken, String dataDir) {
     this.accessToken = accessToken;
     addressArr = serverAddresses.split(",");
     this.storage = new Storage(dataDir);
     createNextConnector();
   }
 
-  public void sync() throws RocksDBException, InvalidProtocolBufferException {
+  public void sync() {
     synchronized (syncLock) {
       int lastSnapshotId = storage.getLastSnapshotId();
-      System.out.println("sync by lastSnapshotId = " + lastSnapshotId);
       ClientProto.SyncResponse res = connector.sync(storage.getUnsynced(), lastSnapshotId);
       if (res.getSyncResponse() == ClientProto.RepType.OK) {
         storage.apply(res.getOpsList(), res.getSnapshotId());
@@ -50,7 +47,7 @@ public class DalvClient {
     }
   }
 
-  public void put(String key, byte[] val) throws RocksDBException { //TODO: accept each type and serialize/deserialize
+  public void put(String key, byte[] val) { //TODO: accept each type and serialize/deserialize
     ClientProto.Operation op = ClientProto.Operation.newBuilder()
         .setKey(key)
         .setVal(ByteString.copyFrom(val))
@@ -61,7 +58,7 @@ public class DalvClient {
     }
   }
 
-  public byte[] get(String key) throws RocksDBException {
+  public byte[] get(String key) {
     byte[] bytes = storage.get(key);
     if (bytes == null)
       return new byte[0];
@@ -72,7 +69,7 @@ public class DalvClient {
     connector = new DalvConnector(addressArr[nextAddressIndex++], accessToken);
   }
 
-  public static void main(String[] args) throws RocksDBException, InvalidProtocolBufferException {
+  public static void main(String[] args) {
     DalvClient client = new DalvClient("localhost:7472",
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlc2EifQ.Gd3BoQIu3tAX2rxlKsgUMJkG38MbDZxoYmKOQfJ9N4g",
         ".client-data");

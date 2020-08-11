@@ -17,18 +17,43 @@
 
 package org.dalvdb.storage;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.dalvdb.proto.ClientProto;
-import org.rocksdb.RocksDBException;
 
 import java.io.Closeable;
 import java.util.List;
 
+/**
+ * A server-side storage layer, responsible for storing operations for users, generating snapshots and provide access
+ * to the user's data
+ *
+ * @see RocksStorageService the default implementation
+ */
 public interface StorageService extends Closeable {
-  boolean handlePuts(String userId, List<ClientProto.Operation> opsList,int lastSnapshotId) throws RocksDBException;
+  /**
+   * handle all operations for a user in an atomic way.
+   *
+   * @param userId         the user identification
+   * @param opsList        list of operation to handle
+   * @param lastSnapshotId last snapshotId seen by user, for conflict detection
+   * @return true if operations persisted successfully, false if any conflict detected
+   */
+  boolean handleOperations(String userId, List<ClientProto.Operation> opsList, int lastSnapshotId);
 
-  List<ClientProto.Operation> get(String userId, int lastSnapshotId) throws RocksDBException, InvalidProtocolBufferException;
+  /**
+   * get the list of user's operations after the lastSnapshotId
+   *
+   * @param userId         the user identification
+   * @param lastSnapshotId last snapshotId seen by user
+   * @return the list of user's operations which occur after the lastSnapshotId
+   */
+  List<ClientProto.Operation> get(String userId, int lastSnapshotId);
 
-  int snapshot(String userId) throws RocksDBException;
+  /**
+   * add a snapshot in the user's log and return the newly generated snapshot id
+   *
+   * @param userId the user identification
+   * @return newly generated snapshot id
+   */
+  int snapshot(String userId);
 
 }

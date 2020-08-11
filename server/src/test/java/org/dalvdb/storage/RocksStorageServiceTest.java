@@ -18,13 +18,13 @@
 package org.dalvdb.storage;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.dalvdb.DalvConfig;
 import org.dalvdb.proto.ClientProto;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.rocksdb.RocksDBException;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
@@ -48,13 +48,11 @@ public class RocksStorageServiceTest {
       storageService.clear();
     } catch (RocksDBException e) {
       e.printStackTrace();
-    } catch (IOException e) {
-      e.printStackTrace();
     }
   }
 
   @Test
-  public void simplePutAndGetTest() throws RocksDBException, InvalidProtocolBufferException {
+  public void simplePutAndGetTest() {
     ClientProto.Operation op1 = ClientProto.Operation.newBuilder()
         .setType(ClientProto.OpType.PUT)
         .setKey("name")
@@ -70,7 +68,7 @@ public class RocksStorageServiceTest {
         .setKey("age")
         .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(30).array()))
         .build();
-    storageService.handlePuts("esa", List.of(op1, op2, op3),0);
+    storageService.handleOperations("esa", List.of(op1, op2, op3), 0);
     List<ClientProto.Operation> ops = storageService.get("esa", 0);
     assertThat(ops.size()).isEqualTo(3);
     assertThat(ops.get(0)).isEqualTo(op1);
@@ -80,7 +78,7 @@ public class RocksStorageServiceTest {
 
 
   @Test
-  public void snapshot() throws RocksDBException, InvalidProtocolBufferException {
+  public void snapshot() {
     ClientProto.Operation op1 = ClientProto.Operation.newBuilder()
         .setType(ClientProto.OpType.PUT)
         .setKey("name")
@@ -96,7 +94,7 @@ public class RocksStorageServiceTest {
         .setKey("age")
         .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(32).array()))
         .build();
-    storageService.handlePuts("ali", List.of(op1, op2, op3),0);
+    storageService.handleOperations("ali", List.of(op1, op2, op3), 0);
     int snapshotId = storageService.snapshot("ali");
     assertThat(snapshotId).isEqualTo(1);
     List<ClientProto.Operation> ops = storageService.get("ali", snapshotId);
@@ -107,7 +105,7 @@ public class RocksStorageServiceTest {
         .setKey("age")
         .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(40).array()))
         .build();
-    storageService.handlePuts("ali", Collections.singletonList(op4),snapshotId);
+    storageService.handleOperations("ali", Collections.singletonList(op4), snapshotId);
     int snapshotId2 = storageService.snapshot("ali");
     assertThat(snapshotId2).isEqualTo(2);
     List<ClientProto.Operation> ops2 = storageService.get("ali", snapshotId);

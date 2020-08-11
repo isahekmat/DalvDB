@@ -18,6 +18,7 @@
 package org.dalvdb.client;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import org.dalvdb.client.exception.StorageException;
 import org.dalvdb.common.util.ByteUtil;
 import org.dalvdb.proto.ClientProto;
 import org.rocksdb.*;
@@ -32,53 +33,81 @@ public class Storage {
   private final RocksDB rocksDB;
   private final WriteOptions wo;
 
-  public Storage(String dataDir) throws RocksDBException {
+  public Storage(String dataDir) {
     Options options = new Options();
     options.setCreateIfMissing(true);
     options.setMergeOperator(new StringAppendOperator((char) (0)));
     wo = new WriteOptions();
     wo.setSync(true);
-    this.rocksDB = RocksDB.open(options, dataDir);
+    try {
+      this.rocksDB = RocksDB.open(options, dataDir);
+    } catch (RocksDBException e) {
+      throw new StorageException("Could not open database", e);
+    }
   }
 
-  public int getLastSnapshotId() throws RocksDBException {
-    byte[] lastSnapshotId = rocksDB.get(LAST_SNAPSHOT_ID_KEY);
+  public int getLastSnapshotId() {
+    byte[] lastSnapshotId;
+    try {
+      lastSnapshotId = rocksDB.get(LAST_SNAPSHOT_ID_KEY);
+    } catch (RocksDBException e) {
+      throw new StorageException(e);
+    }
     if (lastSnapshotId == null) return 0;
     return ByteBuffer.wrap(lastSnapshotId).getInt();
   }
 
-  public void apply(List<ClientProto.Operation> opsList, int snapshotId) throws RocksDBException {
-    System.out.println(opsList);
+  public void apply(List<ClientProto.Operation> opsList, int snapshotId) {
     WriteBatch wb = new WriteBatch();
-    for (ClientProto.Operation op : opsList)
+    try {
+      for (ClientProto.Operation op : opsList)
+        handleOperation(op, wb);
+      wb.put(LAST_SNAPSHOT_ID_KEY, ByteBuffer.allocate(4).putInt(snapshotId).array());
+      wb.delete(UNSYNCED);
+      rocksDB.write(wo, wb);
+    } catch (RocksDBException e) {
+      throw new StorageException(e);
+    }
+  }
+
+  public byte[] get(String key) {
+    try {
+      return rocksDB.get(key.getBytes());
+    } catch (RocksDBException e) {
+      throw new StorageException(e);
+    }
+  }
+
+  public void put(ClientProto.Operation op) {
+    WriteBatch wb = new WriteBatch();
+    try {
       handleOperation(op, wb);
-    wb.put(LAST_SNAPSHOT_ID_KEY, ByteBuffer.allocate(4).putInt(snapshotId).array());
-    wb.delete(UNSYNCED);
-    rocksDB.write(wo, wb);
+      wb.merge(UNSYNCED, ByteUtil.opToByte(op));
+      rocksDB.write(wo, wb);
+    } catch (RocksDBException e) {
+      throw new StorageException(e);
+    }
   }
 
-  public byte[] get(String key) throws RocksDBException {
-    return rocksDB.get(key.getBytes());
+  public List<ClientProto.Operation> getUnsynced() {
+    try {
+      return ByteUtil.byteToOps(rocksDB.get(UNSYNCED));
+    } catch (InvalidProtocolBufferException | RocksDBException e) {
+      throw new StorageException(e);
+    }
   }
 
-  public void put(ClientProto.Operation op) throws RocksDBException {
-    WriteBatch wb = new WriteBatch();
-    handleOperation(op, wb);
-    wb.merge(UNSYNCED, ByteUtil.opToByte(op));
-    rocksDB.write(wo, wb);
-  }
-
-  public List<ClientProto.Operation> getUnsynced() throws RocksDBException, InvalidProtocolBufferException {
-    return ByteUtil.byteToOps(rocksDB.get(UNSYNCED));
-  }
-
-  private void handleOperation(ClientProto.Operation op, WriteBatch wb) throws RocksDBException {
-    if (op.getType() == ClientProto.OpType.PUT)
-      wb.put(op.getKey().getBytes(), op.getVal().toByteArray());
-    else if (op.getType() == ClientProto.OpType.DEL)
-      wb.delete(op.getKey().getBytes());
-    else if (op.getType() == ClientProto.OpType.ADD_TO_LIST) {
-      //TODO
+  private void handleOperation(ClientProto.Operation op, WriteBatch wb) {
+    try {
+      if (op.getType() == ClientProto.OpType.PUT)
+        wb.put(op.getKey().getBytes(), op.getVal().toByteArray());
+      else if (op.getType() == ClientProto.OpType.DEL)
+        wb.delete(op.getKey().getBytes());
+      else if (op.getType() == ClientProto.OpType.ADD_TO_LIST) {
+        //TODO
+      }
+    } catch (RocksDBException e) {
+      throw new StorageException(e);
     }
   }
 

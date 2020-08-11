@@ -19,6 +19,7 @@ package org.dalvdb.storage;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.dalvdb.DalvConfig;
+import org.dalvdb.exception.InternalServerException;
 import org.dalvdb.common.util.ByteUtil;
 import org.dalvdb.proto.ClientProto;
 import org.rocksdb.*;
@@ -56,52 +57,68 @@ public class RocksStorageService implements StorageService {
   }
 
   @Override
-  public boolean handlePuts(String userId, List<ClientProto.Operation> opsList, int lastSnapshotId) throws RocksDBException {
+  public boolean handleOperations(String userId, List<ClientProto.Operation> opsList, int lastSnapshotId) {
     //TODO: check conflict
-    byte[] key = userId.getBytes(Charset.defaultCharset());
-    WriteBatch wb = new WriteBatch();
-    for (ClientProto.Operation operation : opsList) {
-      wb.merge(key,ByteUtil.opToByte(operation));
-    }
-
-    rocksDB.write(wo, wb);
-    return true;
-  }
-
-  @Override
-  public List<ClientProto.Operation> get(String userId, int lastSnapshotId) throws RocksDBException, InvalidProtocolBufferException {
-    byte[] bytes = rocksDB.get(userId.getBytes(Charset.defaultCharset()));
-    LinkedList<ClientProto.Operation> operations = ByteUtil.byteToOps(bytes);
-    Iterator<ClientProto.Operation> operationIterator = operations.descendingIterator();
-    int i = operations.size();
-    while (operationIterator.hasNext()) {
-      ClientProto.Operation op = operationIterator.next();
-      if (op.getType() == ClientProto.OpType.SNAPSHOT && op.getSnapshotId() == lastSnapshotId) {
-        break;
+    try {
+      byte[] key = userId.getBytes(Charset.defaultCharset());
+      WriteBatch wb = new WriteBatch();
+      for (ClientProto.Operation operation : opsList) {
+        wb.merge(key, ByteUtil.opToByte(operation));
       }
-      i--;
+
+      rocksDB.write(wo, wb);
+      return true;
+    } catch (RocksDBException e) {
+      throw new InternalServerException(e);
     }
-    return operations.subList(i, operations.size());
   }
 
   @Override
-  public int snapshot(String userId) throws RocksDBException {
-    int snapshotId = lastSnapshotId(userId) + 1;
-    ClientProto.Operation op = ClientProto.Operation.newBuilder().setType(ClientProto.OpType.SNAPSHOT)
-        .setSnapshotId(snapshotId).build();
-    WriteBatch wb = new WriteBatch(8 + op.toByteArray().length);
-    wb.merge(userId.getBytes(Charset.defaultCharset()),ByteUtil.opToByte(op));
-    wb.put((userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()),
-        ByteBuffer.allocate(4).putInt(snapshotId).array());
-    rocksDB.write(wo, wb);
-    return snapshotId;
+  public List<ClientProto.Operation> get(String userId, int lastSnapshotId) {
+    try {
+      byte[] bytes = rocksDB.get(userId.getBytes(Charset.defaultCharset()));
+      LinkedList<ClientProto.Operation> operations = ByteUtil.byteToOps(bytes);
+      Iterator<ClientProto.Operation> operationIterator = operations.descendingIterator();
+      int i = operations.size();
+      while (operationIterator.hasNext()) {
+        ClientProto.Operation op = operationIterator.next();
+        if (op.getType() == ClientProto.OpType.SNAPSHOT && op.getSnapshotId() == lastSnapshotId) {
+          break;
+        }
+        i--;
+      }
+      return operations.subList(i, operations.size());
+    } catch (InvalidProtocolBufferException | RocksDBException e) {
+      throw new InternalServerException(e);
+    }
   }
 
-  private int lastSnapshotId(String userId) throws RocksDBException {
-    byte[] lastSnapShotId = rocksDB.get((userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()));
-    if (lastSnapShotId == null)
-      return 0;
-    return ByteBuffer.wrap(lastSnapShotId).getInt();
+  @Override
+  public int snapshot(String userId) {
+    try {
+      int snapshotId = lastSnapshotId(userId) + 1;
+      ClientProto.Operation op = ClientProto.Operation.newBuilder().setType(ClientProto.OpType.SNAPSHOT)
+          .setSnapshotId(snapshotId).build();
+      WriteBatch wb = new WriteBatch(8 + op.toByteArray().length);
+      wb.merge(userId.getBytes(Charset.defaultCharset()), ByteUtil.opToByte(op));
+      wb.put((userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()),
+          ByteBuffer.allocate(4).putInt(snapshotId).array());
+      rocksDB.write(wo, wb);
+      return snapshotId;
+    } catch (RocksDBException e) {
+      throw new InternalServerException(e);
+    }
+  }
+
+  private int lastSnapshotId(String userId) {
+    try {
+      byte[] lastSnapShotId = rocksDB.get((userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()));
+      if (lastSnapShotId == null)
+        return 0;
+      return ByteBuffer.wrap(lastSnapShotId).getInt();
+    } catch (RocksDBException e) {
+      throw new InternalServerException(e);
+    }
   }
 
   @Override
