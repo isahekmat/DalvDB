@@ -1,11 +1,5 @@
 # TODO
-* client storage (recreating storage)
-* conflict resolver
-* do everything in single node
-    * atomic writes
-    * lock user
-    * better exceptions and error handling
-    * conflict management
+* conflict resolver/manager
     (reject all operations if one of its key changed after provided snapshot )
 * consistent hashing partitioning
 * server should route clients to appropriate server
