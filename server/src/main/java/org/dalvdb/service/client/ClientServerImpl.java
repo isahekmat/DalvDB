@@ -76,12 +76,10 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
         Lock writeLock = lock.writeLock();
         if (writeLock.tryLock(DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT), TimeUnit.MILLISECONDS)) {
           try {
-            if (storage.handleOperations(userId, request.getOpsList(), request.getLastSnapshotId())) {
+            if (storage.handleOperations(userId, request.getOpsList(), request.getLastSnapshotId()))
               resBuilder.setSyncResponse(ClientProto.RepType.OK);
-              read(userId, request.getLastSnapshotId(), resBuilder);
-            } else {
-              resBuilder.setSyncResponse(ClientProto.RepType.NOK);
-            }
+            else resBuilder.setSyncResponse(ClientProto.RepType.NOK);
+            read(userId, request.getLastSnapshotId(), resBuilder);
           } finally {
             writeLock.unlock();
           }

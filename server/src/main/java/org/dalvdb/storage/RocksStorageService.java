@@ -19,8 +19,8 @@ package org.dalvdb.storage;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.dalvdb.DalvConfig;
-import org.dalvdb.exception.InternalServerException;
 import org.dalvdb.common.util.ByteUtil;
+import org.dalvdb.exception.InternalServerException;
 import org.dalvdb.proto.ClientProto;
 import org.rocksdb.*;
 import org.slf4j.Logger;
@@ -31,6 +31,8 @@ import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class RocksStorageService implements StorageService {
   private static final Logger logger = LoggerFactory.getLogger(RocksStorageService.class);
@@ -58,7 +60,8 @@ public class RocksStorageService implements StorageService {
 
   @Override
   public boolean handleOperations(String userId, List<ClientProto.Operation> opsList, int lastSnapshotId) {
-    //TODO: check conflict
+    if (checkForConflict(get(userId, lastSnapshotId), opsList))
+      return false;
     try {
       byte[] key = userId.getBytes(Charset.defaultCharset());
       WriteBatch wb = new WriteBatch();
@@ -71,6 +74,14 @@ public class RocksStorageService implements StorageService {
     } catch (RocksDBException e) {
       throw new InternalServerException(e);
     }
+  }
+
+  private boolean checkForConflict(List<ClientProto.Operation> oldOps,
+                                   List<ClientProto.Operation> newOps) {
+    if (oldOps.isEmpty()) return false;
+    Set<String> modifiedKeys = oldOps.stream().map(ClientProto.Operation::getKey).collect(Collectors.toSet());
+    return newOps.stream().filter(op -> op.getType() != ClientProto.OpType.SNAPSHOT)
+        .map(ClientProto.Operation::getKey).anyMatch(modifiedKeys::contains);
   }
 
   @Override
@@ -116,6 +127,15 @@ public class RocksStorageService implements StorageService {
       if (lastSnapShotId == null)
         return 0;
       return ByteBuffer.wrap(lastSnapShotId).getInt();
+    } catch (RocksDBException e) {
+      throw new InternalServerException(e);
+    }
+  }
+
+  public void delete(String userId) {
+    try {
+      rocksDB.delete(userId.getBytes(Charset.defaultCharset()));
+      rocksDB.delete((userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()));
     } catch (RocksDBException e) {
       throw new InternalServerException(e);
     }

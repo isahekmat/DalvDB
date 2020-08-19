@@ -74,11 +74,12 @@ public class RocksStorageServiceTest {
     assertThat(ops.get(0)).isEqualTo(op1);
     assertThat(ops.get(1)).isEqualTo(op2);
     assertThat(ops.get(2)).isEqualTo(op3);
+    storageService.delete("esa");
   }
 
 
   @Test
-  public void snapshot() {
+  public void snapshotTest() {
     ClientProto.Operation op1 = ClientProto.Operation.newBuilder()
         .setType(ClientProto.OpType.PUT)
         .setKey("name")
@@ -112,5 +113,40 @@ public class RocksStorageServiceTest {
     assertThat(ops2.size()).isEqualTo(2);
     assertThat(ops2.get(0)).isEqualTo(op4);
     assertThat(ops2.get(1).getType()).isEqualTo(ClientProto.OpType.SNAPSHOT);
+    storageService.delete("ali");
+  }
+
+  @Test
+  public void conflictTest() {
+    ClientProto.Operation op1 = ClientProto.Operation.newBuilder()
+        .setType(ClientProto.OpType.PUT)
+        .setKey("name")
+        .setVal(ByteString.copyFrom("ali".getBytes()))
+        .build();
+    ClientProto.Operation op2 = ClientProto.Operation.newBuilder()
+        .setType(ClientProto.OpType.PUT)
+        .setKey("last_name")
+        .setVal(ByteString.copyFrom("karimin".getBytes()))
+        .build();
+    ClientProto.Operation op3 = ClientProto.Operation.newBuilder()
+        .setType(ClientProto.OpType.PUT)
+        .setKey("age")
+        .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(32).array()))
+        .build();
+    boolean firstWrite = storageService.handleOperations("ali", List.of(op1, op2, op3), 0);
+    assertThat(firstWrite).isTrue();
+
+    ClientProto.Operation op4 = ClientProto.Operation.newBuilder()
+        .setType(ClientProto.OpType.PUT)
+        .setKey("age")
+        .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(40).array()))
+        .build();
+
+    boolean secondWrite = storageService.handleOperations("ali", Collections.singletonList(op4), 0);
+    assertThat(secondWrite).isFalse();
+    List<ClientProto.Operation> ops2 = storageService.get("ali", 0);
+    assertThat(ops2.size()).isEqualTo(3);
+    assertThat(ops2.get(2)).isEqualTo(op3);
+    storageService.delete("ali");
   }
 }
