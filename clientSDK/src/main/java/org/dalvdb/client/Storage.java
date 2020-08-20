@@ -70,6 +70,22 @@ public class Storage {
     }
   }
 
+  public void resolveConflict(int resolvedSnapShot, List<ClientProto.Operation> resolveOps) {
+    WriteBatch wb = new WriteBatch();
+    try {
+      wb.delete(UNSYNCED);
+      for (ClientProto.Operation op : resolveOps) {
+        handleOperation(op, wb);
+        wb.merge(UNSYNCED, ByteUtil.opToByte(op));
+        rocksDB.write(wo, wb);
+      }
+      wb.put(LAST_SNAPSHOT_ID_KEY, ByteBuffer.allocate(4).putInt(resolvedSnapShot).array());
+      rocksDB.write(wo, wb);
+    } catch (RocksDBException e) {
+      throw new StorageException(e);
+    }
+  }
+
   public byte[] get(String key) {
     try {
       return rocksDB.get(key.getBytes());
