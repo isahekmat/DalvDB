@@ -146,9 +146,4 @@ public class RocksStorageService implements StorageService {
     wo.close();
     rocksDB.close();
   }
-
-  public void clear() throws RocksDBException {
-    close();
-    RocksDB.destroyDB(DalvConfig.getStr(DalvConfig.DATA_DIR), new Options());
-  }
 }

@@ -23,6 +23,8 @@ import org.dalvdb.proto.ClientProto;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.rocksdb.Options;
+import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
 import java.nio.ByteBuffer;
@@ -45,7 +47,8 @@ public class RocksStorageServiceTest {
   @AfterClass
   public static void tearDown() {
     try {
-      storageService.clear();
+      storageService.close();
+      RocksDB.destroyDB(DalvConfig.getStr(DalvConfig.DATA_DIR), new Options());
     } catch (RocksDBException e) {
       e.printStackTrace();
     }
