@@ -23,10 +23,11 @@ import org.dalvdb.common.util.ByteUtil;
 import org.dalvdb.proto.ClientProto;
 import org.rocksdb.*;
 
+import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class Storage {
+public class Storage implements Closeable {
   private static final byte[] LAST_SNAPSHOT_ID_KEY = "dalv.lastSnapshotId".getBytes();
   private static final byte[] UNSYNCED = "dalv.unsynced".getBytes();
 
@@ -105,7 +106,7 @@ public class Storage {
     }
   }
 
-  public List<ClientProto.Operation> getUnsynced() {
+  public List<ClientProto.Operation> getUnsyncOps() {
     try {
       return ByteUtil.byteToOps(rocksDB.get(UNSYNCED));
     } catch (InvalidProtocolBufferException | RocksDBException e) {
@@ -127,4 +128,8 @@ public class Storage {
     }
   }
 
+  public void close() {
+    wo.close();
+    rocksDB.close();
+  }
 }

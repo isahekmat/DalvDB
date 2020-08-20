@@ -56,7 +56,7 @@ public class DalvClient {
   public SyncResponse sync() {
     synchronized (syncLock) {
       int lastSnapshotId = storage.getLastSnapshotId();
-      List<ClientProto.Operation> unsynced = storage.getUnsynced();
+      List<ClientProto.Operation> unsynced = storage.getUnsyncOps();
       ClientProto.SyncResponse res = connector.sync(unsynced, lastSnapshotId);
       if (res.getSyncResponse() == ClientProto.RepType.OK) {
         storage.apply(res.getOpsList(), res.getSnapshotId());
