@@ -28,6 +28,7 @@ public class DalvConfig {
   //Config Keys
   public static final String DATA_DIR = "data.dir";
   public static final String NODE_ID = "node.id";
+  public static final String SINGLETON_MODE = "singleton.mode";
   public static final String ZK_CONNECTION_STRING = "zk.connection";
   public static final String ZK_SESSION_TIMEOUT = "zk.sessionTimeout";
   public static final String CLIENT_PORT = "client.port";
@@ -42,6 +43,7 @@ public class DalvConfig {
 
   static {
     //put default values
+    config.put(SINGLETON_MODE, true);
     config.put(DATA_DIR, ".dalv-data/");
     config.put(ZK_CONNECTION_STRING, "localhost:2181");
     config.put(ZK_SESSION_TIMEOUT, 100);
@@ -62,7 +64,7 @@ public class DalvConfig {
     Properties props = new Properties();
     props.load(new FileReader(dalvConfigFile));
     for (Object key : props.keySet())
-      config.put((String) key, props.get(key));
+      config.put((String) key, handleBoolean(props.get(key)));
     String nodeId = System.getenv(DalvConfig.DALV_NODE_ID);
     if (nodeId == null)
       nodeId = (String) config.get(NODE_ID);
@@ -70,6 +72,16 @@ public class DalvConfig {
       nodeId = String.valueOf(UUID.randomUUID());
     config.put(NODE_ID, nodeId);
     validateConfigurations();
+  }
+
+  private static Object handleBoolean(Object val) {
+    if (val instanceof String) {
+      if ("true".equalsIgnoreCase((String) val))
+        return Boolean.TRUE;
+      if ("false".equalsIgnoreCase((String) val))
+        return Boolean.FALSE;
+    }
+    return val;
   }
 
   private static void validateConfigurations() {
@@ -82,6 +94,10 @@ public class DalvConfig {
 
   public static Integer getInt(String key) {
     return (Integer) config.get(key);
+  }
+
+  public static Boolean getBoolean(String key) {
+    return (Boolean) config.get(key);
   }
 
   public static void setStr(String key, Object val) {

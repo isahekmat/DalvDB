@@ -37,7 +37,10 @@ public class DalvServer implements Closeable {
 
   private DalvServer() {
     this.storageService = new RocksStorageService();
-    this.cluster = new DalvCluster();
+    if (!DalvConfig.getBoolean(DalvConfig.SINGLETON_MODE))
+      this.cluster = new DalvCluster();
+    else
+      this.cluster = null;
     this.clientService = new ClientService(this.storageService);
     this.backendService = new BackendService(this.storageService);
     logger.info("Dalv server started up");
@@ -75,7 +78,8 @@ public class DalvServer implements Closeable {
   public void close() throws IOException {
     this.clientService.close();
     this.backendService.close();
-    this.cluster.close();
+    if (cluster != null)
+      this.cluster.close();
     this.storageService.close();
   }
 }
