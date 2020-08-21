@@ -1,6 +1,5 @@
-# Dalv DB
 ## Introduction
-DalvDB leverages modern client's capabilities to consider client application storage as a replica of the database.
+DalvDB is a key/value storage that leverages modern client's capabilities, to consider client application storage as a replica of the database.
 By partitioning data using userId as partition key, it requires clients to store just as much data as it related to the user.
 Client replicas could accept write to certain part of data and synchronize its writes afterward, it could also lag behind 
 the server for a considerable amount of time(days or even months) but DalvDB application layer conflict resolution 
@@ -37,11 +36,3 @@ regardless if the fact that the user is the owner of the data or not, for exampl
 - List of follower
 - Timeline
 - Product categories
-
-## Documentation
-You can find full documentation [here](docs/doc_home.md)
-
-## License
-Copyright 2020-present Isa Hekmatizadeh
-
-Licensed under the AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
