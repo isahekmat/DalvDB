@@ -38,7 +38,7 @@ locking the user bucket.
 For data owned by user, as they could be updated both by client and server sides in parallel, a conflict 
 resolver is needed.
 
-### client side conflict resolver
+### Client side conflict resolver
 During synchronization, clients send all updates along with a snapshot-Id, which indicates the last point of data
 that client synced previously. we talk about snapshots and snapshot Ids later.
 The leader checks whether or not any keys that clients wants to update changed after the snapshot point which client is aware of. If 
