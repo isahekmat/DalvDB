@@ -36,3 +36,11 @@ regardless if the fact that the user is the owner of the data or not, for exampl
 - List of follower
 - Timeline
 - Product categories
+
+## Documentation
+You can find full documentation [here](docs/doc_home.md)
+
+## License
+Copyright 2020-present Isa Hekmatizadeh
+
+Licensed under the AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
