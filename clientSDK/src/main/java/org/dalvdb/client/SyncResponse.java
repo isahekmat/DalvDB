@@ -18,21 +18,25 @@
 package org.dalvdb.client;
 
 import org.dalvdb.client.conflict.Conflict;
+import org.dalvdb.proto.ClientProto;
 
 import java.util.Collections;
 import java.util.List;
 
 public class SyncResponse {
   private final List<Conflict> conflicts;
+  private final List<ClientProto.Operation> operationsWithoutConflict;
   private final int resolvedSnapShot;
 
-  public SyncResponse(List<Conflict> conflicts, int resolvedSnapShot) {
+  public SyncResponse(List<Conflict> conflicts, List<ClientProto.Operation> operationsWithoutConflict, int resolvedSnapShot) {
     this.conflicts = conflicts;
     this.resolvedSnapShot = resolvedSnapShot;
+    this.operationsWithoutConflict = operationsWithoutConflict;
   }
 
   public SyncResponse(int snapshotId) {
     conflicts = Collections.emptyList();
+    operationsWithoutConflict = Collections.emptyList();
     this.resolvedSnapShot = snapshotId;
   }
 
@@ -42,6 +46,10 @@ public class SyncResponse {
 
   public List<Conflict> getConflicts() {
     return conflicts;
+  }
+
+  public List<ClientProto.Operation> getOperationsWithoutConflict() {
+    return operationsWithoutConflict;
   }
 
   public int getResolvedSnapShot() {

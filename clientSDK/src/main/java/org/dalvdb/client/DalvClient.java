@@ -44,13 +44,18 @@ public class DalvClient {
   }
 
   public void sync(ConflictResolver resolver) {
-    SyncResponse res = sync();
-    List<ClientProto.Operation> resolveOps = new LinkedList<>();
-    for (Conflict conflict : res.getConflicts()) {
-      resolveOps.addAll(resolver.resolve(conflict));
+    synchronized (syncLock) {
+      SyncResponse res = sync();
+      if (res.hasConflict()) {
+        List<ClientProto.Operation> resolveOps = new LinkedList<>();
+        for (Conflict conflict : res.getConflicts()) {
+          resolveOps.addAll(resolver.resolve(conflict));
+        }
+        resolveOps.addAll(res.getOperationsWithoutConflict());
+        resolve(res.getResolvedSnapShot(), resolveOps);
+        sync(); //retry
+      }
     }
-    resolve(res.getResolvedSnapShot(), resolveOps);
-    sync(); //retry
   }
 
   public SyncResponse sync() {
@@ -62,44 +67,13 @@ public class DalvClient {
         storage.apply(res.getOpsList(), res.getSnapshotId());
         return new SyncResponse(res.getSnapshotId());
       } else {
-        return extarctConflicts(unsynced, res.getOpsList(), res.getSnapshotId());
+        return extractConflicts(unsynced, res.getOpsList(), res.getSnapshotId());
       }
     }
   }
 
   public void resolve(int resolveSnapshotId, List<ClientProto.Operation> resolveOps) {
     storage.resolveConflict(resolveSnapshotId, resolveOps);
-  }
-
-  private SyncResponse extarctConflicts(List<ClientProto.Operation> unsynced,
-                                        List<ClientProto.Operation> opsList,
-                                        int snapshotId) {
-    Map<String, List<ClientProto.Operation>> unsyncedMap = new HashMap<>(unsynced.size());
-    for (ClientProto.Operation op : unsynced) {
-      putToMap(unsyncedMap, op);
-    }
-    Map<String, List<ClientProto.Operation>> conflictMap = new HashMap<>();
-    for (ClientProto.Operation op : opsList) {
-      if (!unsyncedMap.containsKey(op.getKey()))
-        continue;
-      putToMap(conflictMap, op);
-    }
-
-    List<Conflict> conflictList = new LinkedList<>();
-    for (String key : conflictMap.keySet()) {
-      conflictList.add(new Conflict(conflictMap.get(key), unsyncedMap.get(key)));
-    }
-    return new SyncResponse(conflictList, snapshotId);
-  }
-
-  private void putToMap(Map<String, List<ClientProto.Operation>> map, ClientProto.Operation op) {
-    List<ClientProto.Operation> val = map.get(op.getKey());
-    if (val == null) {
-      val = new LinkedList<>();
-      val.add(op);
-      map.put(op.getKey(), val);
-    }
-    val.add(op);
   }
 
   public void put(String key, byte[] val) { //TODO: accept each type and serialize/deserialize
@@ -118,6 +92,46 @@ public class DalvClient {
     if (bytes == null)
       return new byte[0];
     return bytes;
+  }
+
+  private SyncResponse extractConflicts(List<ClientProto.Operation> unsynced,
+                                        List<ClientProto.Operation> opsList,
+                                        int snapshotId) {
+    List<ClientProto.Operation> opsWithoutConflict = new LinkedList<>();
+    Map<String, List<ClientProto.Operation>> unsyncedMap = new HashMap<>(unsynced.size());
+    for (ClientProto.Operation op : unsynced) {
+      putToMap(unsyncedMap, op);
+    }
+    Map<String, List<ClientProto.Operation>> conflictMap = new HashMap<>();
+    for (ClientProto.Operation op : opsList) {
+      if (!unsyncedMap.containsKey(op.getKey())) {
+        opsWithoutConflict.add(op);
+        continue;
+      }
+      putToMap(conflictMap, op);
+    }
+
+    List<Conflict> conflictList = new LinkedList<>();
+    for (String key : conflictMap.keySet()) {
+      conflictList.add(new Conflict(conflictMap.get(key), unsyncedMap.get(key)));
+    }
+
+    for (String k : unsyncedMap.keySet()) {
+      if (!conflictMap.containsKey(k)) {
+        opsWithoutConflict.addAll(unsyncedMap.get(k));
+      }
+    }
+    return new SyncResponse(conflictList, opsWithoutConflict, snapshotId);
+  }
+
+  private void putToMap(Map<String, List<ClientProto.Operation>> map, ClientProto.Operation op) {
+    List<ClientProto.Operation> val = map.get(op.getKey());
+    if (val == null) {
+      val = new LinkedList<>();
+      val.add(op);
+      map.put(op.getKey(), val);
+    }
+    val.add(op);
   }
 
   private void createNextConnector() {
