@@ -37,7 +37,7 @@ public class StorageTest {
   private String dataDir;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     dataDir = UUID.randomUUID().toString();
     storage = new Storage(dataDir);
   }
@@ -63,8 +63,32 @@ public class StorageTest {
         .setKey("name")
         .setVal(ByteString.copyFrom("esa", Charset.defaultCharset()))
         .build();
-    storage.apply(Collections.singletonList(op1),1);
+    storage.apply(Collections.singletonList(op1), 1);
     assertThat(storage.getLastSnapshotId()).isEqualTo(1);
     assertThat(new String(storage.get("name"))).isEqualTo("esa");
+  }
+
+  @Test
+  public void resolveConflictTest() {
+    ClientProto.Operation op1 = ClientProto.Operation.newBuilder()
+        .setType(ClientProto.OpType.PUT)
+        .setKey("name")
+        .setVal(ByteString.copyFrom("esa", Charset.defaultCharset()))
+        .build();
+
+    storage.put(op1);
+
+    ClientProto.Operation op2 = ClientProto.Operation.newBuilder()
+        .setType(ClientProto.OpType.PUT)
+        .setKey("name")
+        .setVal(ByteString.copyFrom("ali", Charset.defaultCharset()))
+        .build();
+
+    storage.resolveConflict(1, Collections.singletonList(op2));
+
+    assertThat(storage.getLastSnapshotId()).isEqualTo(1);
+    assertThat(storage.getUnsyncOps().size()).isEqualTo(1);
+    assertThat(storage.getUnsyncOps().get(0)).isEqualTo(op2);
+    assertThat(new String(storage.get("name"))).isEqualTo("ali");
   }
 }
