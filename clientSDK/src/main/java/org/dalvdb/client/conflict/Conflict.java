@@ -17,7 +17,6 @@
 
 package org.dalvdb.client.conflict;
 
-import com.google.protobuf.ByteString;
 import org.dalvdb.proto.ClientProto;
 
 import java.util.List;

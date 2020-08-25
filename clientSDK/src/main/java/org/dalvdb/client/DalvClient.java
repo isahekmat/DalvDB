@@ -20,7 +20,6 @@ package org.dalvdb.client;
 import com.google.protobuf.ByteString;
 import org.dalvdb.client.conflict.Conflict;
 import org.dalvdb.client.conflict.ConflictResolver;
-import org.dalvdb.client.conflict.resolver.AcceptServerResolver;
 import org.dalvdb.proto.ClientProto;
 
 import java.util.HashMap;
@@ -29,18 +28,20 @@ import java.util.List;
 import java.util.Map;
 
 public class DalvClient {
-  private final String[] addressArr;
-  private int nextAddressIndex = 0;
-  private final String accessToken;
-  private DalvConnector connector;
+  private final List<DalvConnector> connectors;
   private final Storage storage;
   private final Object syncLock = new Object();
 
-  public DalvClient(String serverAddresses, String accessToken, String dataDir) {
-    this.accessToken = accessToken;
-    addressArr = serverAddresses.split(",");
-    this.storage = new Storage(dataDir);
-    createNextConnector();
+  private DalvConnector currentConnector;
+  private int currentConnectorIndex;
+
+  DalvClient(List<DalvConnector> connectors, Storage storage) {
+    if (connectors.size() < 1)
+      throw new IllegalArgumentException("At least one connector should be existed");
+    this.connectors = connectors;
+    this.storage = storage;
+    this.currentConnectorIndex = 0;
+    this.currentConnector = connectors.get(0);
   }
 
   public void sync(ConflictResolver resolver) {
@@ -62,7 +63,7 @@ public class DalvClient {
     synchronized (syncLock) {
       int lastSnapshotId = storage.getLastSnapshotId();
       List<ClientProto.Operation> unsynced = storage.getUnsyncOps();
-      ClientProto.SyncResponse res = connector.sync(unsynced, lastSnapshotId);
+      ClientProto.SyncResponse res = currentConnector.sync(unsynced, lastSnapshotId);
       if (res.getSyncResponse() == ClientProto.RepType.OK) {
         storage.apply(res.getOpsList(), res.getSnapshotId());
         return new SyncResponse(res.getSnapshotId());
@@ -81,6 +82,16 @@ public class DalvClient {
         .setKey(key)
         .setVal(ByteString.copyFrom(val))
         .setType(ClientProto.OpType.PUT)
+        .build();
+    synchronized (syncLock) {
+      storage.put(op);
+    }
+  }
+
+  public void delete(String key){
+    ClientProto.Operation op = ClientProto.Operation.newBuilder()
+        .setKey(key)
+        .setType(ClientProto.OpType.DEL)
         .build();
     synchronized (syncLock) {
       storage.put(op);
@@ -130,23 +141,7 @@ public class DalvClient {
       val = new LinkedList<>();
       val.add(op);
       map.put(op.getKey(), val);
-    }
-    val.add(op);
+    } else
+      val.add(op);
   }
-
-  private void createNextConnector() {
-    connector = new DalvConnector(addressArr[nextAddressIndex++], accessToken);
-  }
-
-  public static void main(String[] args) {
-    DalvClient client = new DalvClient("localhost:7472",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlc2EifQ.Gd3BoQIu3tAX2rxlKsgUMJkG38MbDZxoYmKOQfJ9N4g",
-        ".client-data");
-    client.put("theme", "blue".getBytes());
-    client.sync(new AcceptServerResolver());
-
-    System.out.println(new String(client.get("theme")));
-    System.out.println("Done");
-  }
-
 }
