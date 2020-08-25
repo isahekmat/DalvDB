@@ -18,6 +18,7 @@
 package org.dalvdb.client;
 
 import com.google.protobuf.ByteString;
+import org.dalvdb.client.conflict.resolver.AcceptServerResolver;
 import org.dalvdb.proto.ClientProto;
 import org.junit.Before;
 import org.junit.Test;
@@ -184,6 +185,58 @@ public class DalvClientTest {
     assertThat(res.getConflicts().get(0).getClientOps()).isEqualTo(Collections.singletonList(op1OnClient));
     assertThat(res.getConflicts().get(0).getKey()).isEqualTo("name");
     verify(mockStorage,never()).apply(ArgumentMatchers.<ClientProto.Operation>anyList(),anyInt());
+  }
+
+  @Test
+  public void syncWithResolverTest() {
+    ClientProto.Operation op1OnServer = ClientProto.Operation.newBuilder()
+        .setType(ClientProto.OpType.PUT)
+        .setKey("name")
+        .setVal(ByteString.copyFrom("ali".getBytes()))
+        .build();
+    ClientProto.Operation op2OnServer = ClientProto.Operation.newBuilder()
+        .setType(ClientProto.OpType.DEL)
+        .setKey("age")
+        .build();
+    ClientProto.Operation op1OnClient = ClientProto.Operation.newBuilder()
+        .setType(ClientProto.OpType.PUT)
+        .setKey("name")
+        .setVal(ByteString.copyFrom("esa".getBytes()))
+        .build();
+    ClientProto.Operation op2OnClient = ClientProto.Operation.newBuilder()
+        .setType(ClientProto.OpType.PUT)
+        .setKey("last_name")
+        .setVal(ByteString.copyFrom("hekmat".getBytes()))
+        .build();
+    List<ClientProto.Operation> clientOps = new LinkedList<>();
+    clientOps.add(op1OnClient);
+    clientOps.add(op2OnClient);
+
+    ClientProto.SyncResponse response = ClientProto.SyncResponse.newBuilder()
+        .setSnapshotId(1)
+        .addOps(op1OnServer)
+        .addOps(op2OnServer)
+        .setSyncResponse(ClientProto.RepType.NOK)
+        .build();
+    when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), eq(0)))
+        .thenReturn(response);
+    ClientProto.SyncResponse response2 = ClientProto.SyncResponse.newBuilder()
+        .setSnapshotId(2)
+        .setSyncResponse(ClientProto.RepType.OK)
+        .build();
+    when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), eq(1)))
+        .thenReturn(response2);
+    List<ClientProto.Operation> resolveOps = new LinkedList<>();
+    resolveOps.add(op1OnServer);
+    resolveOps.add(op2OnServer);
+    resolveOps.add(op2OnClient);
+    when(mockStorage.getUnsyncOps()).thenReturn(clientOps, resolveOps);
+    when(mockStorage.getLastSnapshotId()).thenReturn(0,1);
+    client.sync(new AcceptServerResolver());
+
+    verify(mockStorage).resolveConflict(1,resolveOps);
+    verify(mockConnector,atLeastOnce()).sync(clientOps,0);
+    verify(mockConnector,atLeastOnce()).sync(resolveOps,1);
   }
 
 
