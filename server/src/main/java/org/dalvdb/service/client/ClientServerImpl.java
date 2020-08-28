@@ -69,34 +69,49 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
 
   private ClientProto.SyncResponse handleSync(String userId, ClientProto.SyncRequest request)
       throws InternalServerException {
-    ClientProto.SyncResponse.Builder resBuilder = ClientProto.SyncResponse.newBuilder();
-    ReadWriteLock lock = userLockManager.getLock(userId);
     try {
       if (request.getOpsList() != null && request.getOpsList().size() > 0) {
-        Lock writeLock = lock.writeLock();
-        if (writeLock.tryLock(DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT), TimeUnit.MILLISECONDS)) {
-          try {
-            if (storage.handleOperations(userId, request.getOpsList(), request.getLastSnapshotId()))
-              resBuilder.setSyncResponse(ClientProto.RepType.OK);
-            else resBuilder.setSyncResponse(ClientProto.RepType.NOK);
-            read(userId, request.getLastSnapshotId(), resBuilder);
-          } finally {
-            writeLock.unlock();
-          }
-        }
+        return handleSyncWithUpdate(userId, request);
       } else {
-        Lock readLock = lock.readLock();
-        if (readLock.tryLock(DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT), TimeUnit.MILLISECONDS)) {
-          try {
-            read(userId, request.getLastSnapshotId(), resBuilder);
-          } finally {
-            readLock.unlock();
-          }
-        }
+        return handleSyncWithoutUpdate(userId, request);
       }
     } catch (InterruptedException e) {
       throw new InternalServerException(e);
     }
+  }
+
+  private ClientProto.SyncResponse handleSyncWithoutUpdate(String userId, ClientProto.SyncRequest request) throws InterruptedException {
+    ClientProto.SyncResponse.Builder resBuilder = ClientProto.SyncResponse.newBuilder();
+    ReadWriteLock lock = userLockManager.getLock(userId);
+    Lock readLock = lock.readLock();
+    if (readLock.tryLock(DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT), TimeUnit.MILLISECONDS)) {
+      try {
+        read(userId, request.getLastSnapshotId(), resBuilder);
+        resBuilder.setSyncResponse(ClientProto.RepType.OK);
+        return resBuilder.build();
+      } finally {
+        readLock.unlock();
+      }
+    }
+    resBuilder.setSyncResponse(ClientProto.RepType.NOK);
+    return resBuilder.build();
+  }
+
+  private ClientProto.SyncResponse handleSyncWithUpdate(String userId, ClientProto.SyncRequest request) throws InterruptedException {
+    ClientProto.SyncResponse.Builder resBuilder = ClientProto.SyncResponse.newBuilder();
+    ReadWriteLock lock = userLockManager.getLock(userId);
+    Lock writeLock = lock.writeLock();
+    if (writeLock.tryLock(DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT), TimeUnit.MILLISECONDS)) {
+      try {
+        boolean updatesHandledSuccessfully = storage.handleOperations(userId, request.getOpsList(), request.getLastSnapshotId());
+        resBuilder.setSyncResponse(updatesHandledSuccessfully ? ClientProto.RepType.OK : ClientProto.RepType.NOK);
+        read(userId, request.getLastSnapshotId(), resBuilder);
+        return resBuilder.build();
+      } finally {
+        writeLock.unlock();
+      }
+    }
+    resBuilder.setSyncResponse(ClientProto.RepType.NOK);
     return resBuilder.build();
   }
 
@@ -104,14 +119,10 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
                     ClientProto.SyncResponse.Builder responseBuilder) {
     List<ClientProto.Operation> ops = storage.get(userId, lastSnapshotId);
     responseBuilder.addAllOps(ops);
-    if (ops.isEmpty()) {
+    if (ops.isEmpty() || ops.get(ops.size() - 1).getType() == ClientProto.OpType.SNAPSHOT) {
       responseBuilder.setSnapshotId(lastSnapshotId);
     } else {
-      ClientProto.Operation last = ops.get(ops.size() - 1);
-      if (last.getType() == ClientProto.OpType.SNAPSHOT)
-        responseBuilder.setSnapshotId(last.getSnapshotId());
-      else
-        responseBuilder.setSnapshotId(storage.snapshot(userId));
+      responseBuilder.setSnapshotId(storage.snapshot(userId));
     }
   }
 
