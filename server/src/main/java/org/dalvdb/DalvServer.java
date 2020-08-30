@@ -28,6 +28,13 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 
+/**
+ * This class contains main method which is the starting point for an instance of a Dalv Server.
+ * On bootstrap, an instance of this class will be created and on shutdown this class should be closed.
+ * <p>
+ * This class also responsible to instantiate and start sub-components of the Dalv server such as Storage-Service or
+ * Client-Service
+ */
 public class DalvServer implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(DalvServer.class);
   private final StorageService storageService;
@@ -47,6 +54,11 @@ public class DalvServer implements Closeable {
   }
 
 
+  /**
+   * The Starting point of the Dalv Server
+   *
+   * @param args command line argument which could indicate the configuration file
+   */
   public static void main(String[] args) {
     try {
       if (args.length == 0)
@@ -74,6 +86,10 @@ public class DalvServer implements Closeable {
     }));
   }
 
+  /**
+   * Close the all sub-components of DalvServer. on starting, main method add a shutdown hook to close the internal
+   * instance of the class.
+   */
   @Override
   public void close() throws IOException {
     this.clientService.close();

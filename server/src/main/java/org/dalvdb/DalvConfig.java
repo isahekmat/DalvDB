@@ -24,7 +24,14 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
-public class DalvConfig {
+/**
+ * Static class which handles all the Dalv Configuration,
+ * Read the configuration file supplied to loadFromConfig method. and answer to each part of the application need
+ * a particular configuration by its getter methods.
+ * <p>
+ * This class also provides a list of all configuration keys in a form of constant fields.
+ */
+public final class DalvConfig {
   //Config Keys
   public static final String DATA_DIR = "data.dir";
   public static final String NODE_ID = "node.id";
@@ -52,6 +59,16 @@ public class DalvConfig {
     config.put(LOCK_TIMEOUT, 200);
   }
 
+  private DalvConfig() {
+    throw new IllegalStateException();
+  }
+
+  /**
+   * Load configurations, from the Dalv configuration file which its address provided by environment variable
+   * 'DALV_CONFIG'
+   *
+   * @throws IOException if the environment variable is empty, does not point to a valid configuration file
+   */
   public static void loadFromEnvironmentVariable() throws IOException {
     String dalvConfigFile = System.getenv(DalvConfig.DALV_CONFIG);
     if (dalvConfigFile == null)
@@ -60,6 +77,12 @@ public class DalvConfig {
     loadFromConfig(dalvConfigFile);
   }
 
+  /**
+   * Load configuration, form the Dalv configuration file which its address provided by the argument.
+   *
+   * @param dalvConfigFile the Dalv configuration file address
+   * @throws IOException if the config file address is not valid or the file is not readable
+   */
   public static void loadFromConfig(String dalvConfigFile) throws IOException {
     Properties props = new Properties();
     props.load(new FileReader(dalvConfigFile));
@@ -88,18 +111,42 @@ public class DalvConfig {
     //Nothing since now
   }
 
+  /**
+   * Get a configuration which its value is a String
+   *
+   * @param key the configuration key
+   * @return the configuration value
+   */
   public static String getStr(String key) {
     return (String) config.get(key);
   }
 
+  /**
+   * Get a configuration which its value is an Integer
+   *
+   * @param key the configuration key
+   * @return the configuration value
+   */
   public static Integer getInt(String key) {
     return (Integer) config.get(key);
   }
 
+  /**
+   * Get a configuration which its value is a Boolean
+   *
+   * @param key the configuration key
+   * @return the configuration value
+   */
   public static Boolean getBoolean(String key) {
     return (Boolean) config.get(key);
   }
 
+  /**
+   * Set a configuration. useful to change the configuration in the runtime specially in unit tests
+   *
+   * @param key the configuration key
+   * @param val the configuration value
+   */
   public static void setStr(String key, Object val) {
     config.put(key, val);
   }

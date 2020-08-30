@@ -56,4 +56,10 @@ public interface StorageService extends Closeable {
    */
   int snapshot(String userId);
 
+  /**
+   * Delete the information of a specific user
+   *
+   * @param userId the user identification
+   */
+  void delete(String userId);
 }

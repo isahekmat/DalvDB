@@ -34,6 +34,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * The default implementation of {@link StorageService} which employs RocksDB as the internal storage engine to store data on
+ * permanent storage
+ */
 public class RocksStorageService implements StorageService {
   private static final Logger logger = LoggerFactory.getLogger(RocksStorageService.class);
   private final RocksDB rocksDB;
@@ -58,6 +62,9 @@ public class RocksStorageService implements StorageService {
     this.wo = writeOptions;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public boolean handleOperations(String userId, List<ClientProto.Operation> opsList, int lastSnapshotId) {
     if (checkForConflict(get(userId, lastSnapshotId), opsList))
@@ -84,6 +91,9 @@ public class RocksStorageService implements StorageService {
         .map(ClientProto.Operation::getKey).anyMatch(modifiedKeys::contains);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public List<ClientProto.Operation> get(String userId, int lastSnapshotId) {
     try {
@@ -104,6 +114,9 @@ public class RocksStorageService implements StorageService {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public int snapshot(String userId) {
     try {
@@ -132,6 +145,10 @@ public class RocksStorageService implements StorageService {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
+  @Override
   public void delete(String userId) {
     try {
       rocksDB.delete(userId.getBytes(Charset.defaultCharset()));
@@ -141,6 +158,9 @@ public class RocksStorageService implements StorageService {
     }
   }
 
+  /**
+   * Close the underling rocks db instance and its writeOptions
+   */
   @Override
   public void close() {
     wo.close();
