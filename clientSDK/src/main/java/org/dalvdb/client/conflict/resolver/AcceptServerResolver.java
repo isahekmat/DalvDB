@@ -17,16 +17,16 @@
 
 package org.dalvdb.client.conflict.resolver;
 
+import dalv.common.Common;
 import org.dalvdb.client.conflict.Conflict;
 import org.dalvdb.client.conflict.ConflictResolver;
-import org.dalvdb.proto.ClientProto;
 
 import java.util.List;
 
 public class AcceptServerResolver implements ConflictResolver {
 
   @Override
-  public List<ClientProto.Operation> resolve(Conflict conflict) {
+  public List<Common.Operation> resolve(Conflict conflict) {
     return conflict.getServerOps();
   }
 }

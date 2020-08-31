@@ -17,17 +17,17 @@
 
 package org.dalvdb.client.conflict;
 
-import org.dalvdb.proto.ClientProto;
+import dalv.common.Common;
 
 import java.util.List;
 
 public class Conflict {
   private final String key;
-  private final List<ClientProto.Operation> serverOps;
-  private final List<ClientProto.Operation> clientOps;
+  private final List<Common.Operation> serverOps;
+  private final List<Common.Operation> clientOps;
 
-  public Conflict(List<ClientProto.Operation> serverOps, List<ClientProto.Operation> clientOps) {
-    if(serverOps.size()<1 || clientOps.size()<1)
+  public Conflict(List<Common.Operation> serverOps, List<Common.Operation> clientOps) {
+    if (serverOps.size() < 1 || clientOps.size() < 1)
       throw new IllegalArgumentException("no conflicting operations");
     this.key = serverOps.get(0).getKey();
     this.clientOps = clientOps;
@@ -38,11 +38,11 @@ public class Conflict {
     return key;
   }
 
-  public List<ClientProto.Operation> getServerOps() {
+  public List<Common.Operation> getServerOps() {
     return serverOps;
   }
 
-  public List<ClientProto.Operation> getClientOps() {
+  public List<Common.Operation> getClientOps() {
     return clientOps;
   }
 }

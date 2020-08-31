@@ -6,3 +6,17 @@ enum RepType {
   NOK = 1;
   NOT_AUTHORIZED = 2;
 }
+
+message Operation {
+  OpType type = 1;
+  string key = 2;
+  bytes val = 3;
+  uint32 snapshotId = 4;
+}
+
+enum OpType {
+  PUT = 0;
+  DEL = 1;
+  ADD_TO_LIST = 2;
+  SNAPSHOT = 3;
+}

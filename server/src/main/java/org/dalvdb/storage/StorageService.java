@@ -17,7 +17,7 @@
 
 package org.dalvdb.storage;
 
-import org.dalvdb.proto.ClientProto;
+import dalv.common.Common;
 
 import java.io.Closeable;
 import java.util.List;
@@ -37,9 +37,9 @@ public interface StorageService extends Closeable {
    * @param lastSnapshotId last snapshotId seen by user, for conflict detection
    * @return true if operations persisted successfully, false if any conflict detected
    */
-  boolean handleOperations(String userId, List<ClientProto.Operation> opsList, int lastSnapshotId);
+  boolean handleOperations(String userId, List<Common.Operation> opsList, int lastSnapshotId);
 
-  boolean addOperation(String userId, ClientProto.Operation operation);
+  boolean addOperation(String userId, Common.Operation operation);
 
   /**
    * get the list of user's operations after the lastSnapshotId
@@ -48,7 +48,7 @@ public interface StorageService extends Closeable {
    * @param lastSnapshotId last snapshotId seen by user
    * @return the list of user's operations which occur after the lastSnapshotId
    */
-  List<ClientProto.Operation> get(String userId, int lastSnapshotId);
+  List<Common.Operation> get(String userId, int lastSnapshotId);
 
   /**
    * add a snapshot in the user's log and return the newly generated snapshot id

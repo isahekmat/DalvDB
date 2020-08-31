@@ -17,6 +17,7 @@
 
 package org.dalvdb.client;
 
+import dalv.common.Common;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import org.dalvdb.proto.ClientProto;
@@ -38,7 +39,7 @@ class DalvConnector implements Closeable {
     client = ClientServerGrpc.newBlockingStub(channel);
   }
 
-  public ClientProto.SyncResponse sync(List<ClientProto.Operation> ops, int lastSnapshotId) {
+  public ClientProto.SyncResponse sync(List<Common.Operation> ops, int lastSnapshotId) {
     ClientProto.SyncRequest request = ClientProto.SyncRequest.newBuilder()
         .setLastSnapshotId(lastSnapshotId)
         .addAllOps(ops)

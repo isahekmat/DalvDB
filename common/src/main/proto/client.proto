@@ -15,26 +15,12 @@ service ClientServer {
 
 message SyncRequest {
   string jwt = 1;
-  repeated Operation ops = 2;
+  repeated common.Operation ops = 2;
   uint32 lastSnapshotId = 3;
 }
 
 message SyncResponse {
-  dalv.common.RepType syncResponse = 1;
+  common.RepType syncResponse = 1;
   uint32 snapshotId = 2;
-  repeated Operation ops = 3;
-}
-
-message Operation {
-  OpType type = 1;
-  string key = 2;
-  bytes val = 3;
-  uint32 snapshotId = 4;
-}
-
-enum OpType {
-  PUT = 0;
-  DEL = 1;
-  ADD_TO_LIST = 2;
-  SNAPSHOT = 3;
+  repeated common.Operation ops = 3;
 }

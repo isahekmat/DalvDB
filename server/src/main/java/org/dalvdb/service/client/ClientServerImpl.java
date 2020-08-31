@@ -113,9 +113,9 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
 
   private void read(String userId, int lastSnapshotId,
                     ClientProto.SyncResponse.Builder responseBuilder) {
-    List<ClientProto.Operation> ops = storage.get(userId, lastSnapshotId);
+    List<Common.Operation> ops = storage.get(userId, lastSnapshotId);
     responseBuilder.addAllOps(ops);
-    if (ops.isEmpty() || ops.get(ops.size() - 1).getType() == ClientProto.OpType.SNAPSHOT) {
+    if (ops.isEmpty() || ops.get(ops.size() - 1).getType() == Common.OpType.SNAPSHOT) {
       responseBuilder.setSnapshotId(lastSnapshotId);
     } else {
       responseBuilder.setSnapshotId(storage.snapshot(userId));

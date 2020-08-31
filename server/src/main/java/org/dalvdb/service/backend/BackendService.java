@@ -20,7 +20,6 @@ package org.dalvdb.service.backend;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.dalvdb.DalvConfig;
-import org.dalvdb.service.client.ClientService;
 import org.dalvdb.storage.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

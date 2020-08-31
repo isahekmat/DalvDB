@@ -49,7 +49,7 @@ public class DalvClient {
     synchronized (syncLock) {
       SyncResponse res = sync();
       if (res.hasConflict()) {
-        List<ClientProto.Operation> resolveOps = new LinkedList<>();
+        List<Common.Operation> resolveOps = new LinkedList<>();
         for (Conflict conflict : res.getConflicts()) {
           resolveOps.addAll(resolver.resolve(conflict));
         }
@@ -63,7 +63,7 @@ public class DalvClient {
   public SyncResponse sync() {
     synchronized (syncLock) {
       int lastSnapshotId = storage.getLastSnapshotId();
-      List<ClientProto.Operation> unsynced = storage.getUnsyncOps();
+      List<Common.Operation> unsynced = storage.getUnsyncOps();
       ClientProto.SyncResponse res = currentConnector.sync(unsynced, lastSnapshotId);
       if (res.getSyncResponse() == Common.RepType.OK) {
         storage.apply(res.getOpsList(), res.getSnapshotId());
@@ -74,25 +74,25 @@ public class DalvClient {
     }
   }
 
-  public void resolve(int resolveSnapshotId, List<ClientProto.Operation> resolveOps) {
+  public void resolve(int resolveSnapshotId, List<Common.Operation> resolveOps) {
     storage.resolveConflict(resolveSnapshotId, resolveOps);
   }
 
   public void put(String key, byte[] val) { //TODO: accept each type and serialize/deserialize
-    ClientProto.Operation op = ClientProto.Operation.newBuilder()
+    Common.Operation op = Common.Operation.newBuilder()
         .setKey(key)
         .setVal(ByteString.copyFrom(val))
-        .setType(ClientProto.OpType.PUT)
+        .setType(Common.OpType.PUT)
         .build();
     synchronized (syncLock) {
       storage.put(op);
     }
   }
 
-  public void delete(String key){
-    ClientProto.Operation op = ClientProto.Operation.newBuilder()
+  public void delete(String key) {
+    Common.Operation op = Common.Operation.newBuilder()
         .setKey(key)
-        .setType(ClientProto.OpType.DEL)
+        .setType(Common.OpType.DEL)
         .build();
     synchronized (syncLock) {
       storage.put(op);
@@ -106,16 +106,16 @@ public class DalvClient {
     return bytes;
   }
 
-  private SyncResponse extractConflicts(List<ClientProto.Operation> unsynced,
-                                        List<ClientProto.Operation> opsList,
+  private SyncResponse extractConflicts(List<Common.Operation> unsynced,
+                                        List<Common.Operation> opsList,
                                         int snapshotId) {
-    List<ClientProto.Operation> opsWithoutConflict = new LinkedList<>();
-    Map<String, List<ClientProto.Operation>> unsyncedMap = new HashMap<>(unsynced.size());
-    for (ClientProto.Operation op : unsynced) {
+    List<Common.Operation> opsWithoutConflict = new LinkedList<>();
+    Map<String, List<Common.Operation>> unsyncedMap = new HashMap<>(unsynced.size());
+    for (Common.Operation op : unsynced) {
       putToMap(unsyncedMap, op);
     }
-    Map<String, List<ClientProto.Operation>> conflictMap = new HashMap<>();
-    for (ClientProto.Operation op : opsList) {
+    Map<String, List<Common.Operation>> conflictMap = new HashMap<>();
+    for (Common.Operation op : opsList) {
       if (!unsyncedMap.containsKey(op.getKey())) {
         opsWithoutConflict.add(op);
         continue;
@@ -136,8 +136,8 @@ public class DalvClient {
     return new SyncResponse(conflictList, opsWithoutConflict, snapshotId);
   }
 
-  private void putToMap(Map<String, List<ClientProto.Operation>> map, ClientProto.Operation op) {
-    List<ClientProto.Operation> val = map.get(op.getKey());
+  private void putToMap(Map<String, List<Common.Operation>> map, Common.Operation op) {
+    List<Common.Operation> val = map.get(op.getKey());
     if (val == null) {
       val = new LinkedList<>();
       val.add(op);

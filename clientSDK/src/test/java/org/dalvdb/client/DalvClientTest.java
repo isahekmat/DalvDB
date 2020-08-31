@@ -30,7 +30,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
@@ -49,8 +49,8 @@ public class DalvClientTest {
 
   @Test
   public void syncWithoutConflictTest() {
-    ClientProto.Operation op = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("ali".getBytes()))
         .build();
@@ -60,7 +60,7 @@ public class DalvClientTest {
         .setSyncResponse(Common.RepType.OK)
         .build();
 
-    when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), anyInt()))
+    when(mockConnector.sync(ArgumentMatchers.<Common.Operation>anyList(), anyInt()))
         .thenReturn(response);
     SyncResponse res = client.sync();
     assertThat(res.hasConflict()).isFalse();
@@ -70,13 +70,13 @@ public class DalvClientTest {
 
   @Test
   public void syncWithConflictTest() {
-    ClientProto.Operation opOnServer = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation opOnServer = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("ali".getBytes()))
         .build();
-    ClientProto.Operation opOnClient = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation opOnClient = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("esa".getBytes()))
         .build();
@@ -86,7 +86,7 @@ public class DalvClientTest {
         .addOps(opOnServer)
         .setSyncResponse(Common.RepType.NOK)
         .build();
-    when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), anyInt()))
+    when(mockConnector.sync(ArgumentMatchers.<Common.Operation>anyList(), anyInt()))
         .thenReturn(response);
     when(mockStorage.getUnsyncOps()).thenReturn(Collections.singletonList(opOnClient));
     SyncResponse res = client.sync();
@@ -96,31 +96,31 @@ public class DalvClientTest {
     assertThat(res.getConflicts().get(0).getServerOps()).isEqualTo(Collections.singletonList(opOnServer));
     assertThat(res.getConflicts().get(0).getClientOps()).isEqualTo(Collections.singletonList(opOnClient));
     assertThat(res.getConflicts().get(0).getKey()).isEqualTo("name");
-    verify(mockStorage,never()).apply(ArgumentMatchers.<ClientProto.Operation>anyList(),anyInt());
+    verify(mockStorage, never()).apply(ArgumentMatchers.<Common.Operation>anyList(), anyInt());
   }
 
   @Test
   public void syncWithSeveralConflictTest() {
-    ClientProto.Operation op1OnServer = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op1OnServer = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("ali".getBytes()))
         .build();
-    ClientProto.Operation op2OnServer = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.DEL)
+    Common.Operation op2OnServer = Common.Operation.newBuilder()
+        .setType(Common.OpType.DEL)
         .setKey("name")
         .build();
-    ClientProto.Operation op1OnClient = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op1OnClient = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("esa".getBytes()))
         .build();
-    ClientProto.Operation op2OnClient = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op2OnClient = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("esa2".getBytes()))
         .build();
-    List<ClientProto.Operation> clientOps = new LinkedList<>();
+    List<Common.Operation> clientOps = new LinkedList<>();
     clientOps.add(op1OnClient);
     clientOps.add(op2OnClient);
 
@@ -130,7 +130,7 @@ public class DalvClientTest {
         .addOps(op2OnServer)
         .setSyncResponse(Common.RepType.NOK)
         .build();
-    when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), anyInt()))
+    when(mockConnector.sync(ArgumentMatchers.<Common.Operation>anyList(), anyInt()))
         .thenReturn(response);
     when(mockStorage.getUnsyncOps()).thenReturn(clientOps);
     SyncResponse res = client.sync();
@@ -140,31 +140,31 @@ public class DalvClientTest {
     assertThat(res.getConflicts().get(0).getServerOps()).isEqualTo(response.getOpsList());
     assertThat(res.getConflicts().get(0).getClientOps()).isEqualTo(clientOps);
     assertThat(res.getConflicts().get(0).getKey()).isEqualTo("name");
-    verify(mockStorage,never()).apply(ArgumentMatchers.<ClientProto.Operation>anyList(),anyInt());
+    verify(mockStorage, never()).apply(ArgumentMatchers.<Common.Operation>anyList(), anyInt());
   }
 
   @Test
   public void syncWithConflictAndWithoutConflictTest() {
-    ClientProto.Operation op1OnServer = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op1OnServer = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("ali".getBytes()))
         .build();
-    ClientProto.Operation op2OnServer = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.DEL)
+    Common.Operation op2OnServer = Common.Operation.newBuilder()
+        .setType(Common.OpType.DEL)
         .setKey("age")
         .build();
-    ClientProto.Operation op1OnClient = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op1OnClient = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("esa".getBytes()))
         .build();
-    ClientProto.Operation op2OnClient = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op2OnClient = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("last_name")
         .setVal(ByteString.copyFrom("hekmat".getBytes()))
         .build();
-    List<ClientProto.Operation> clientOps = new LinkedList<>();
+    List<Common.Operation> clientOps = new LinkedList<>();
     clientOps.add(op1OnClient);
     clientOps.add(op2OnClient);
 
@@ -174,7 +174,7 @@ public class DalvClientTest {
         .addOps(op2OnServer)
         .setSyncResponse(Common.RepType.NOK)
         .build();
-    when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), anyInt()))
+    when(mockConnector.sync(ArgumentMatchers.<Common.Operation>anyList(), anyInt()))
         .thenReturn(response);
     when(mockStorage.getUnsyncOps()).thenReturn(clientOps);
     SyncResponse res = client.sync();
@@ -185,31 +185,31 @@ public class DalvClientTest {
     assertThat(res.getConflicts().get(0).getServerOps()).isEqualTo(Collections.singletonList(op1OnServer));
     assertThat(res.getConflicts().get(0).getClientOps()).isEqualTo(Collections.singletonList(op1OnClient));
     assertThat(res.getConflicts().get(0).getKey()).isEqualTo("name");
-    verify(mockStorage,never()).apply(ArgumentMatchers.<ClientProto.Operation>anyList(),anyInt());
+    verify(mockStorage, never()).apply(ArgumentMatchers.<Common.Operation>anyList(), anyInt());
   }
 
   @Test
   public void syncWithResolverTest() {
-    ClientProto.Operation op1OnServer = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op1OnServer = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("ali".getBytes()))
         .build();
-    ClientProto.Operation op2OnServer = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.DEL)
+    Common.Operation op2OnServer = Common.Operation.newBuilder()
+        .setType(Common.OpType.DEL)
         .setKey("age")
         .build();
-    ClientProto.Operation op1OnClient = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op1OnClient = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("esa".getBytes()))
         .build();
-    ClientProto.Operation op2OnClient = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op2OnClient = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("last_name")
         .setVal(ByteString.copyFrom("hekmat".getBytes()))
         .build();
-    List<ClientProto.Operation> clientOps = new LinkedList<>();
+    List<Common.Operation> clientOps = new LinkedList<>();
     clientOps.add(op1OnClient);
     clientOps.add(op2OnClient);
 
@@ -219,32 +219,32 @@ public class DalvClientTest {
         .addOps(op2OnServer)
         .setSyncResponse(Common.RepType.NOK)
         .build();
-    when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), eq(0)))
+    when(mockConnector.sync(ArgumentMatchers.<Common.Operation>anyList(), eq(0)))
         .thenReturn(response);
     ClientProto.SyncResponse response2 = ClientProto.SyncResponse.newBuilder()
         .setSnapshotId(2)
         .setSyncResponse(Common.RepType.OK)
         .build();
-    when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), eq(1)))
+    when(mockConnector.sync(ArgumentMatchers.<Common.Operation>anyList(), eq(1)))
         .thenReturn(response2);
-    List<ClientProto.Operation> resolveOps = new LinkedList<>();
+    List<Common.Operation> resolveOps = new LinkedList<>();
     resolveOps.add(op1OnServer);
     resolveOps.add(op2OnServer);
     resolveOps.add(op2OnClient);
     when(mockStorage.getUnsyncOps()).thenReturn(clientOps, resolveOps);
-    when(mockStorage.getLastSnapshotId()).thenReturn(0,1);
+    when(mockStorage.getLastSnapshotId()).thenReturn(0, 1);
     client.sync(new AcceptServerResolver());
 
-    verify(mockStorage).resolveConflict(1,resolveOps);
-    verify(mockConnector,atLeastOnce()).sync(clientOps,0);
-    verify(mockConnector,atLeastOnce()).sync(resolveOps,1);
+    verify(mockStorage).resolveConflict(1, resolveOps);
+    verify(mockConnector, atLeastOnce()).sync(clientOps, 0);
+    verify(mockConnector, atLeastOnce()).sync(resolveOps, 1);
   }
 
 
   @Test
   public void putTest() {
-    ClientProto.Operation op = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("esa".getBytes()))
         .build();
@@ -254,8 +254,8 @@ public class DalvClientTest {
 
   @Test
   public void deleteTest() {
-    ClientProto.Operation op = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.DEL)
+    Common.Operation op = Common.Operation.newBuilder()
+        .setType(Common.OpType.DEL)
         .setKey("name")
         .build();
     client.delete("name");

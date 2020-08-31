@@ -18,7 +18,7 @@
 package org.dalvdb.client;
 
 import com.google.protobuf.ByteString;
-import org.dalvdb.proto.ClientProto;
+import dalv.common.Common;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,15 +51,15 @@ public class StorageTest {
   @Test
   public void getLastSnapshotIdTest() {
     assertThat(storage.getLastSnapshotId()).isEqualTo(0);
-    storage.apply(Collections.<ClientProto.Operation>emptyList(), 3);
+    storage.apply(Collections.<Common.Operation>emptyList(), 3);
     assertThat(storage.getLastSnapshotId()).isEqualTo(3);
 
   }
 
   @Test
   public void applyTest() {
-    ClientProto.Operation op1 = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op1 = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("esa", Charset.defaultCharset()))
         .build();
@@ -70,16 +70,16 @@ public class StorageTest {
 
   @Test
   public void resolveConflictTest() {
-    ClientProto.Operation op1 = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op1 = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("esa", Charset.defaultCharset()))
         .build();
 
     storage.put(op1);
 
-    ClientProto.Operation op2 = ClientProto.Operation.newBuilder()
-        .setType(ClientProto.OpType.PUT)
+    Common.Operation op2 = Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
         .setKey("name")
         .setVal(ByteString.copyFrom("ali", Charset.defaultCharset()))
         .build();

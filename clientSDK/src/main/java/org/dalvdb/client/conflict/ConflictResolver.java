@@ -17,10 +17,10 @@
 
 package org.dalvdb.client.conflict;
 
-import org.dalvdb.proto.ClientProto;
+import dalv.common.Common;
 
 import java.util.List;
 
 public interface ConflictResolver {
-  List<ClientProto.Operation> resolve(Conflict conflict);
+  List<Common.Operation> resolve(Conflict conflict);
 }

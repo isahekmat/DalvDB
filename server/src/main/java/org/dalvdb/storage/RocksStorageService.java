@@ -18,10 +18,10 @@
 package org.dalvdb.storage;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import dalv.common.Common;
 import org.dalvdb.DalvConfig;
 import org.dalvdb.common.util.ByteUtil;
 import org.dalvdb.exception.InternalServerException;
-import org.dalvdb.proto.ClientProto;
 import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,13 +66,13 @@ public class RocksStorageService implements StorageService {
    * {@inheritDoc}
    */
   @Override
-  public boolean handleOperations(String userId, List<ClientProto.Operation> opsList, int lastSnapshotId) {
+  public boolean handleOperations(String userId, List<Common.Operation> opsList, int lastSnapshotId) {
     if (checkForConflict(get(userId, lastSnapshotId), opsList))
       return false;
     try {
       byte[] key = userId.getBytes(Charset.defaultCharset());
       WriteBatch wb = new WriteBatch();
-      for (ClientProto.Operation operation : opsList) {
+      for (Common.Operation operation : opsList) {
         wb.merge(key, ByteUtil.opToByte(operation));
       }
 
@@ -84,7 +84,7 @@ public class RocksStorageService implements StorageService {
   }
 
   @Override
-  public boolean addOperation(String userId, ClientProto.Operation operation) {
+  public boolean addOperation(String userId, Common.Operation operation) {
     try {
       byte[] key = userId.getBytes(Charset.defaultCharset());
       rocksDB.merge(key, ByteUtil.opToByte(operation));
@@ -94,27 +94,27 @@ public class RocksStorageService implements StorageService {
     }
   }
 
-  private boolean checkForConflict(List<ClientProto.Operation> oldOps,
-                                   List<ClientProto.Operation> newOps) {
+  private boolean checkForConflict(List<Common.Operation> oldOps,
+                                   List<Common.Operation> newOps) {
     if (oldOps.isEmpty()) return false;
-    Set<String> modifiedKeys = oldOps.stream().map(ClientProto.Operation::getKey).collect(Collectors.toSet());
-    return newOps.stream().filter(op -> op.getType() != ClientProto.OpType.SNAPSHOT)
-        .map(ClientProto.Operation::getKey).anyMatch(modifiedKeys::contains);
+    Set<String> modifiedKeys = oldOps.stream().map(Common.Operation::getKey).collect(Collectors.toSet());
+    return newOps.stream().filter(op -> op.getType() != Common.OpType.SNAPSHOT)
+        .map(Common.Operation::getKey).anyMatch(modifiedKeys::contains);
   }
 
   /**
    * {@inheritDoc}
    */
   @Override
-  public List<ClientProto.Operation> get(String userId, int lastSnapshotId) {
+  public List<Common.Operation> get(String userId, int lastSnapshotId) {
     try {
       byte[] bytes = rocksDB.get(userId.getBytes(Charset.defaultCharset()));
-      LinkedList<ClientProto.Operation> operations = ByteUtil.byteToOps(bytes);
-      Iterator<ClientProto.Operation> operationIterator = operations.descendingIterator();
+      LinkedList<Common.Operation> operations = ByteUtil.byteToOps(bytes);
+      Iterator<Common.Operation> operationIterator = operations.descendingIterator();
       int i = operations.size();
       while (operationIterator.hasNext()) {
-        ClientProto.Operation op = operationIterator.next();
-        if (op.getType() == ClientProto.OpType.SNAPSHOT && op.getSnapshotId() == lastSnapshotId) {
+        Common.Operation op = operationIterator.next();
+        if (op.getType() == Common.OpType.SNAPSHOT && op.getSnapshotId() == lastSnapshotId) {
           break;
         }
         i--;
@@ -132,7 +132,7 @@ public class RocksStorageService implements StorageService {
   public int snapshot(String userId) {
     try {
       int snapshotId = lastSnapshotId(userId) + 1;
-      ClientProto.Operation op = ClientProto.Operation.newBuilder().setType(ClientProto.OpType.SNAPSHOT)
+      Common.Operation op = Common.Operation.newBuilder().setType(Common.OpType.SNAPSHOT)
           .setSnapshotId(snapshotId).build();
       WriteBatch wb = new WriteBatch(8 + op.toByteArray().length);
       wb.merge(userId.getBytes(Charset.defaultCharset()), ByteUtil.opToByte(op));

@@ -19,6 +19,7 @@ package org.dalvdb.common.util;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import dalv.common.Common;
 import org.dalvdb.proto.ClientProto;
 
 import java.nio.ByteBuffer;
@@ -26,14 +27,14 @@ import java.util.LinkedList;
 
 public class ByteUtil {
 
-  public static LinkedList<ClientProto.Operation> byteToOps(byte[] bytes) throws InvalidProtocolBufferException {
-    LinkedList<ClientProto.Operation> ops = new LinkedList<>();
+  public static LinkedList<Common.Operation> byteToOps(byte[] bytes) throws InvalidProtocolBufferException {
+    LinkedList<Common.Operation> ops = new LinkedList<>();
     int offset = 0;
     if (bytes == null) return ops;
     while (offset < bytes.length) {
       int len = ByteBuffer.wrap(bytes, offset, 4).getInt();
       offset += 5;
-      ClientProto.Operation op = ClientProto.Operation.parseFrom(ByteString.copyFrom(bytes, offset, len));
+      Common.Operation op = Common.Operation.parseFrom(ByteString.copyFrom(bytes, offset, len));
       offset += len;
       ops.add(op);
       offset++;
@@ -41,7 +42,7 @@ public class ByteUtil {
     return ops;
   }
 
-  public static byte[] opToByte(ClientProto.Operation op) {
+  public static byte[] opToByte(Common.Operation op) {
     byte[] oprBytes = op.toByteArray();
     byte[] result = new byte[5 + oprBytes.length];
     System.arraycopy(ByteBuffer.allocate(4).putInt(oprBytes.length).array(), 0, result, 0, 4);

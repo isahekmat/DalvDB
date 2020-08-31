@@ -24,7 +24,6 @@ import org.dalvdb.exception.InternalServerException;
 import org.dalvdb.lock.UserLockManager;
 import org.dalvdb.proto.BackendProto;
 import org.dalvdb.proto.BackendServerGrpc;
-import org.dalvdb.proto.ClientProto;
 import org.dalvdb.storage.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,9 +47,9 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
   public void put(BackendProto.PutRequest request, StreamObserver<BackendProto.PutResponse> responseObserver) {
     try {
       if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
-        storageService.addOperation(request.getUserId(), ClientProto.Operation.newBuilder()
+        storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
             .setKey(request.getKey())
-            .setType(ClientProto.OpType.PUT)
+            .setType(Common.OpType.PUT)
             .setVal(request.getValue())
             .build());
       } else {

@@ -18,9 +18,9 @@
 package org.dalvdb.client;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import dalv.common.Common;
 import org.dalvdb.client.exception.StorageException;
 import org.dalvdb.common.util.ByteUtil;
-import org.dalvdb.proto.ClientProto;
 import org.rocksdb.*;
 
 import java.io.Closeable;
@@ -58,10 +58,10 @@ public class Storage implements Closeable {
     return ByteBuffer.wrap(lastSnapshotId).getInt();
   }
 
-  public void apply(List<ClientProto.Operation> opsList, int snapshotId) {
+  public void apply(List<Common.Operation> opsList, int snapshotId) {
     WriteBatch wb = new WriteBatch();
     try {
-      for (ClientProto.Operation op : opsList)
+      for (Common.Operation op : opsList)
         handleOperation(op, wb);
       wb.put(LAST_SNAPSHOT_ID_KEY, ByteBuffer.allocate(4).putInt(snapshotId).array());
       wb.delete(UNSYNCED);
@@ -71,11 +71,11 @@ public class Storage implements Closeable {
     }
   }
 
-  public void resolveConflict(int resolvedSnapShot, List<ClientProto.Operation> resolveOps) {
+  public void resolveConflict(int resolvedSnapShot, List<Common.Operation> resolveOps) {
     WriteBatch wb = new WriteBatch();
     try {
       wb.delete(UNSYNCED);
-      for (ClientProto.Operation op : resolveOps) {
+      for (Common.Operation op : resolveOps) {
         handleOperation(op, wb);
         wb.merge(UNSYNCED, ByteUtil.opToByte(op));
         rocksDB.write(wo, wb);
@@ -95,7 +95,7 @@ public class Storage implements Closeable {
     }
   }
 
-  public void put(ClientProto.Operation op) {
+  public void put(Common.Operation op) {
     WriteBatch wb = new WriteBatch();
     try {
       handleOperation(op, wb);
@@ -106,7 +106,7 @@ public class Storage implements Closeable {
     }
   }
 
-  public List<ClientProto.Operation> getUnsyncOps() {
+  public List<Common.Operation> getUnsyncOps() {
     try {
       return ByteUtil.byteToOps(rocksDB.get(UNSYNCED));
     } catch (InvalidProtocolBufferException | RocksDBException e) {
@@ -114,13 +114,13 @@ public class Storage implements Closeable {
     }
   }
 
-  private void handleOperation(ClientProto.Operation op, WriteBatch wb) {
+  private void handleOperation(Common.Operation op, WriteBatch wb) {
     try {
-      if (op.getType() == ClientProto.OpType.PUT)
+      if (op.getType() == Common.OpType.PUT)
         wb.put(op.getKey().getBytes(), op.getVal().toByteArray());
-      else if (op.getType() == ClientProto.OpType.DEL)
+      else if (op.getType() == Common.OpType.DEL)
         wb.delete(op.getKey().getBytes());
-      else if (op.getType() == ClientProto.OpType.ADD_TO_LIST) {
+      else if (op.getType() == Common.OpType.ADD_TO_LIST) {
         //TODO
       }
     } catch (RocksDBException e) {
