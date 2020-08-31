@@ -17,27 +17,112 @@
 
 package org.dalvdb.lock;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.dalvdb.DalvConfig;
+
+import java.util.Comparator;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * Singleton class that its single instance keep a list of {@link ReadWriteLock} for users. each user has a single lock
+ * It acts as a LRU cache, and delete locks once the number of locks reach the threshold, however, it does not delete
+ * any locks that that currently hold.
+ */
 public class UserLockManager {
-  private final Map<String, ReadWriteLock> locks = new ConcurrentHashMap<>();
   private static UserLockManager instance;
+  private final Map<String, LockEntry> locks = new ConcurrentHashMap<>();
+  private final ReadWriteLock pruningLock = new ReentrantReadWriteLock();
+  private final int threshold;
 
-  private UserLockManager() {
+  @VisibleForTesting
+  UserLockManager(int threshold) {
+    this.threshold = threshold;
   }
 
   public static synchronized UserLockManager getInstance() {
     if (instance == null) {
-      instance = new UserLockManager();
+      instance = new UserLockManager(DalvConfig.getInt(DalvConfig.LOCK_SIZE_THRESHOLD));
     }
     return instance;
   }
 
-  public ReadWriteLock getLock(String userId) {
-    locks.putIfAbsent(userId, new ReentrantReadWriteLock());
-    return locks.get(userId);
+  public boolean tryReadLock(String userId, long timeout) throws InterruptedException {
+    LockEntry lockEntry = getLock(userId);
+    if (lockEntry != null && lockEntry.lock.readLock().tryLock(timeout, TimeUnit.MILLISECONDS)) {
+      pruningLock.readLock().lock();
+      lockEntry.numberOfHold.incrementAndGet();
+      lockEntry.lastUsedTimestamp = System.currentTimeMillis();
+      pruningLock.readLock().unlock();
+      return true;
+    }
+    return false;
+  }
+
+  public boolean tryWriteLock(String userId, long timeout) throws InterruptedException {
+    LockEntry lockEntry = getLock(userId);
+    if (lockEntry != null && lockEntry.lock.writeLock().tryLock(timeout, TimeUnit.MILLISECONDS)) {
+      pruningLock.readLock().lock();
+      lockEntry.numberOfHold.incrementAndGet();
+      lockEntry.lastUsedTimestamp = System.currentTimeMillis();
+      pruningLock.readLock().unlock();
+      return true;
+    }
+    return false;
+  }
+
+  public void releaseReadLock(String userId) {
+    LockEntry lockEntry = getLock(userId);
+    Objects.requireNonNull(lockEntry).lock.readLock().unlock();
+    lockEntry.numberOfHold.decrementAndGet();
+  }
+
+  public void releaseWriteLock(String userId) {
+    LockEntry lockEntry = getLock(userId);
+    Objects.requireNonNull(lockEntry).lock.writeLock().unlock();
+    lockEntry.numberOfHold.decrementAndGet();
+  }
+
+  private LockEntry getLock(String userId) {
+    return locks.computeIfAbsent(userId, (k) -> {
+      if (locks.size() == threshold && !prune())
+        return null;
+      return new LockEntry();
+    });
+  }
+
+  private boolean prune() {
+    Lock lock = pruningLock.writeLock();
+    lock.lock();
+    AtomicBoolean success = new AtomicBoolean(false);
+    Optional<Map.Entry<String, LockEntry>> removeCandidate = locks.entrySet().stream()
+        .filter(e -> e.getValue().numberOfHold.intValue() == 0)
+        .min(Comparator.comparing(e -> e.getValue().lastUsedTimestamp));
+    removeCandidate.map(Map.Entry::getKey).ifPresent(key -> {
+      locks.remove(key);
+      success.set(true);
+    });
+    lock.unlock();
+    return success.get();
+  }
+
+  private static class LockEntry {
+    private final ReadWriteLock lock;
+    private Long lastUsedTimestamp;
+    private final AtomicInteger numberOfHold;
+
+    public LockEntry() {
+      this.lastUsedTimestamp = System.currentTimeMillis();
+      numberOfHold = new AtomicInteger(0);
+      this.lock = new ReentrantReadWriteLock();
+    }
   }
 }

@@ -31,9 +31,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 
 public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
   private static final Logger logger = LoggerFactory.getLogger(ClientServerImpl.class);
@@ -82,15 +79,14 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
 
   private ClientProto.SyncResponse handleSyncWithoutUpdate(String userId, ClientProto.SyncRequest request) throws InterruptedException {
     ClientProto.SyncResponse.Builder resBuilder = ClientProto.SyncResponse.newBuilder();
-    ReadWriteLock lock = userLockManager.getLock(userId);
-    Lock readLock = lock.readLock();
-    if (readLock.tryLock(DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT), TimeUnit.MILLISECONDS)) {
+    //TODO: maybe it's better to retry for a limited time if it cannot acquire the lock
+    if (userLockManager.tryReadLock(userId, DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
       try {
         read(userId, request.getLastSnapshotId(), resBuilder);
         resBuilder.setSyncResponse(ClientProto.RepType.OK);
         return resBuilder.build();
       } finally {
-        readLock.unlock();
+        userLockManager.releaseReadLock(userId);
       }
     }
     resBuilder.setSyncResponse(ClientProto.RepType.NOK);
@@ -99,16 +95,15 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
 
   private ClientProto.SyncResponse handleSyncWithUpdate(String userId, ClientProto.SyncRequest request) throws InterruptedException {
     ClientProto.SyncResponse.Builder resBuilder = ClientProto.SyncResponse.newBuilder();
-    ReadWriteLock lock = userLockManager.getLock(userId);
-    Lock writeLock = lock.writeLock();
-    if (writeLock.tryLock(DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT), TimeUnit.MILLISECONDS)) {
+    //TODO: maybe it's better to retry for a limited time if it cannot acquire the lock
+    if (userLockManager.tryWriteLock(userId, DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
       try {
         boolean updatesHandledSuccessfully = storage.handleOperations(userId, request.getOpsList(), request.getLastSnapshotId());
         resBuilder.setSyncResponse(updatesHandledSuccessfully ? ClientProto.RepType.OK : ClientProto.RepType.NOK);
         read(userId, request.getLastSnapshotId(), resBuilder);
         return resBuilder.build();
       } finally {
-        writeLock.unlock();
+        userLockManager.releaseWriteLock(userId);
       }
     }
     resBuilder.setSyncResponse(ClientProto.RepType.NOK);

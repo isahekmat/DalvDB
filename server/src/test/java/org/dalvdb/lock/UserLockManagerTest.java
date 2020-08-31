@@ -29,16 +29,18 @@ public class UserLockManagerTest {
   @Test
   public void getWriteLockBlockReadLocks() throws InterruptedException {
     UserLockManager manager = UserLockManager.getInstance();
-    assertThat(manager.getLock("esa").writeLock().tryLock()).isTrue();
+    assertThat(manager.tryWriteLock("esa", 0)).isTrue();
     AtomicReference<AssertionError> assertionError = new AtomicReference<>();
     Object monitor = new Object();
     new Thread(() -> {
       synchronized (monitor) {
         try {
-          assertThat(manager.getLock("esa").readLock().tryLock()).isFalse();
-          assertThat(manager.getLock("esa").writeLock().tryLock()).isFalse();
+          assertThat(manager.tryReadLock("esa", 0)).isFalse();
+          assertThat(manager.tryWriteLock("esa", 0)).isFalse();
         } catch (AssertionError e) {
           assertionError.set(e);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
         }
         monitor.notify();
       }
@@ -48,26 +50,28 @@ public class UserLockManagerTest {
     }
     if (assertionError.get() != null)
       throw assertionError.get();
-    manager.getLock("esa").writeLock().unlock();
+    manager.releaseWriteLock("esa");
   }
 
   @Test
   public void getSeveralReadLocksBlockWriteLocks() throws InterruptedException {
     UserLockManager manager = UserLockManager.getInstance();
-    assertThat(manager.getLock("esa").readLock().tryLock()).isTrue();
+    assertThat(manager.tryReadLock("esa", 0)).isTrue();
     Object monitor = new Object();
     AtomicReference<AssertionError> assertionError = new AtomicReference<>();
 
     new Thread(() -> {
       try {
-        assertThat(manager.getLock("esa").readLock().tryLock()).isTrue();
+        assertThat(manager.tryReadLock("esa", 0)).isTrue();
         Object secondMonitor = new Object();
         new Thread(() -> {
           synchronized (secondMonitor) {
             try {
-              assertThat(manager.getLock("esa").writeLock().tryLock()).isFalse();
+              assertThat(manager.tryWriteLock("esa", 0)).isFalse();
             } catch (AssertionError e) {
               assertionError.set(e);
+            } catch (InterruptedException e) {
+              e.printStackTrace();
             }
             secondMonitor.notify();
           }
@@ -75,13 +79,15 @@ public class UserLockManagerTest {
         synchronized (secondMonitor) {
           try {
             secondMonitor.wait();
-            manager.getLock("esa").readLock().unlock();
+            manager.releaseReadLock("esa");
           } catch (InterruptedException e) {
             Assertions.fail(e.getMessage());
           }
         }
       } catch (AssertionError e) {
         assertionError.set(e);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
       }
       synchronized (monitor) {
         monitor.notify();
@@ -93,22 +99,24 @@ public class UserLockManagerTest {
     }
     if (assertionError.get() != null)
       throw assertionError.get();
-    manager.getLock("esa").readLock().unlock();
+    manager.releaseReadLock("esa");
   }
 
   @Test
   public void getWriteLocksOfDifferentUser() throws InterruptedException {
     UserLockManager manager = UserLockManager.getInstance();
-    assertThat(manager.getLock("esa").writeLock().tryLock()).isTrue();
+    assertThat(manager.tryWriteLock("esa", 0)).isTrue();
     AtomicReference<AssertionError> assertionError = new AtomicReference<>();
     Object monitor = new Object();
     new Thread(() -> {
       synchronized (monitor) {
         try {
-          assertThat(manager.getLock("ali").writeLock().tryLock()).isTrue();
-          manager.getLock("ali").writeLock().unlock();
+          assertThat(manager.tryWriteLock("ali", 0)).isTrue();
+          manager.releaseWriteLock("ali");
         } catch (AssertionError e) {
           assertionError.set(e);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
         }
         monitor.notify();
       }
@@ -118,7 +126,19 @@ public class UserLockManagerTest {
     }
     if (assertionError.get() != null)
       throw assertionError.get();
-    manager.getLock("esa").writeLock().unlock();
+    manager.releaseWriteLock("esa");
+  }
+
+  @Test
+  public void blockUntilRelease() throws InterruptedException {
+    UserLockManager manager = new UserLockManager(2);
+    assertThat(manager.tryReadLock("esa", 0)).isTrue();
+    assertThat(manager.tryReadLock("sia", 0)).isTrue();
+    assertThat(manager.tryReadLock("nazi", 0)).isFalse();
+    manager.releaseReadLock("esa");
+    assertThat(manager.tryReadLock("nazi", 0)).isTrue();
+    manager.releaseReadLock("sia");
+    manager.releaseReadLock("nazi");
   }
 
 }

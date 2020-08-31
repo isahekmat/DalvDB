@@ -41,6 +41,7 @@ public final class DalvConfig {
   public static final String CLIENT_PORT = "client.port";
   public static final String JWT_SIGN = "jwt.signature";
   public static final String LOCK_TIMEOUT = "lock.timeout";
+  public static final String LOCK_SIZE_THRESHOLD = "lock.size.threshold";
 
   //Environment Variable
   private static final String DALV_CONFIG = "DALV_CONFIG";
@@ -57,6 +58,7 @@ public final class DalvConfig {
     config.put(CLIENT_PORT, 7472);
     config.put(JWT_SIGN, "havijfarangichekhoobehavijfarangichekhoobehavijfarangichekhoobe");
     config.put(LOCK_TIMEOUT, 200);
+    config.put(LOCK_SIZE_THRESHOLD, 200);
   }
 
   private DalvConfig() {
@@ -147,7 +149,7 @@ public final class DalvConfig {
    * @param key the configuration key
    * @param val the configuration value
    */
-  public static void setStr(String key, Object val) {
+  public static void set(String key, Object val) {
     config.put(key, val);
   }
 }
