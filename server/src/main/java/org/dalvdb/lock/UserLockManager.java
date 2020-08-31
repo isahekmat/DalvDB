@@ -48,6 +48,11 @@ public class UserLockManager {
     this.threshold = threshold;
   }
 
+  /**
+   * Get the singleton instance
+   *
+   * @return the singleton instance
+   */
   public static synchronized UserLockManager getInstance() {
     if (instance == null) {
       instance = new UserLockManager(DalvConfig.getInt(DalvConfig.LOCK_SIZE_THRESHOLD));
@@ -55,6 +60,17 @@ public class UserLockManager {
     return instance;
   }
 
+  /**
+   * Try to acquire the user read lock within the timeout provided.
+   * <p>
+   * Note that in the case of lockManager has reached the threshold and prune was not possible the method return false
+   * immediately
+   *
+   * @param userId  the user identification
+   * @param timeout the time to wait until lock will be available
+   * @return true if lock acquired or false otherwise,
+   * @throws InterruptedException in the case of interruption while waiting to acquire lock
+   */
   public boolean tryReadLock(String userId, long timeout) throws InterruptedException {
     LockEntry lockEntry = getLock(userId);
     if (lockEntry != null && lockEntry.lock.readLock().tryLock(timeout, TimeUnit.MILLISECONDS)) {
@@ -67,6 +83,17 @@ public class UserLockManager {
     return false;
   }
 
+  /**
+   * Try to acquire the user write lock within the timeout provided.
+   * <p>
+   * Note that in the case of lockManager has reached the threshold and prune was not possible the method return false
+   * immediately
+   *
+   * @param userId  the user identification
+   * @param timeout the time to wait until lock will be available
+   * @return true if lock acquired or false otherwise,
+   * @throws InterruptedException in the case of interruption while waiting to acquire lock
+   */
   public boolean tryWriteLock(String userId, long timeout) throws InterruptedException {
     LockEntry lockEntry = getLock(userId);
     if (lockEntry != null && lockEntry.lock.writeLock().tryLock(timeout, TimeUnit.MILLISECONDS)) {
@@ -79,12 +106,22 @@ public class UserLockManager {
     return false;
   }
 
+  /**
+   * release the read lock of user
+   *
+   * @param userId the user identification
+   */
   public void releaseReadLock(String userId) {
     LockEntry lockEntry = getLock(userId);
     Objects.requireNonNull(lockEntry).lock.readLock().unlock();
     lockEntry.numberOfHold.decrementAndGet();
   }
 
+  /**
+   * release the write lock of user
+   *
+   * @param userId the user identification
+   */
   public void releaseWriteLock(String userId) {
     LockEntry lockEntry = getLock(userId);
     Objects.requireNonNull(lockEntry).lock.writeLock().unlock();
