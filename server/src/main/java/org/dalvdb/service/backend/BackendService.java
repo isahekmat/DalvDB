@@ -17,21 +17,51 @@
 
 package org.dalvdb.service.backend;
 
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
+import org.dalvdb.DalvConfig;
+import org.dalvdb.service.client.ClientService;
 import org.dalvdb.storage.StorageService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class BackendService implements Closeable {
-  private final StorageService storageService;
+  private static final Logger logger = LoggerFactory.getLogger(BackendService.class);
+  private final Server server;
 
   public BackendService(StorageService storageService) {
-    this.storageService = storageService;
+    final int port = DalvConfig.getInt(DalvConfig.BACKEND_PORT);
+    server = ServerBuilder.forPort(port)
+        .addService(new BackendServiceImpl(storageService)).build();
+    try {
+      server.start();
+    } catch (IOException e) {
+      logger.error("Starting server failed", e);
+      System.exit(1);
+    }
+    logger.info("Server started, listening on " + port);
+
+    new Thread(() -> {
+      try {
+        server.awaitTermination();
+      } catch (InterruptedException ignored) {
+      }
+    }).start();
   }
-  //TODO:impl
+
 
   @Override
-  public void close() throws IOException {
-
+  public void close() {
+    if (server != null) {
+      try {
+        server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        logger.error(e.getMessage(), e);
+      }
+    }
   }
 }

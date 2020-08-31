@@ -1,0 +1,36 @@
+syntax = "proto3";
+option java_package = "org.dalvdb.proto";
+option java_outer_classname = "BackendProto";
+option java_generate_equals_and_hash = true;
+
+service BackendServer {
+  rpc get (GetRequest) returns (GetResponse){}
+  rpc put (PutRequest) returns (PutResponse){}
+  rpc del (DelRequest) returns (DelResponse){}
+}
+
+message GetRequest {
+  string userId = 1;
+  string key = 2;
+}
+
+message GetResponse {
+  bytes value = 1;
+}
+
+message PutRequest {
+  string userId = 1;
+  string key = 2;
+  bytes value = 3;
+}
+
+message PutResponse {
+}
+
+message DelRequest {
+  string userId = 1;
+  string key = 2;
+}
+
+message DelResponse {
+}

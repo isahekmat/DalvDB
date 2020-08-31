@@ -34,8 +34,7 @@ public class ClientService implements Closeable {
 
   public ClientService(StorageService storageService) {
     final int port = DalvConfig.getInt(DalvConfig.CLIENT_PORT);
-    server = ServerBuilder.forPort(port).addService(new ClientServerImpl(storageService))
-        .build();
+    server = ServerBuilder.forPort(port).addService(new ClientServerImpl(storageService)).build();
     try {
       server.start();
     } catch (IOException e) {

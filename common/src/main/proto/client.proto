@@ -2,9 +2,11 @@ syntax = "proto3";
 option java_package = "org.dalvdb.proto";
 option java_outer_classname = "ClientProto";
 option java_generate_equals_and_hash = true;
+
 service ClientServer {
-  rpc Sync (SyncRequest) returns (SyncResponse){}
+  rpc sync (SyncRequest) returns (SyncResponse){}
 }
+
 message SyncRequest {
   string jwt = 1;
   repeated Operation ops = 2;
