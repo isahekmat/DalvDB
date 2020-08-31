@@ -39,6 +39,8 @@ public interface StorageService extends Closeable {
    */
   boolean handleOperations(String userId, List<ClientProto.Operation> opsList, int lastSnapshotId);
 
+  boolean addOperation(String userId, ClientProto.Operation operation);
+
   /**
    * get the list of user's operations after the lastSnapshotId
    *

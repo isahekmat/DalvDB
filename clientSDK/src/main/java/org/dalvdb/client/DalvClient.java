@@ -18,6 +18,7 @@
 package org.dalvdb.client;
 
 import com.google.protobuf.ByteString;
+import dalv.common.Common;
 import org.dalvdb.client.conflict.Conflict;
 import org.dalvdb.client.conflict.ConflictResolver;
 import org.dalvdb.proto.ClientProto;
@@ -64,7 +65,7 @@ public class DalvClient {
       int lastSnapshotId = storage.getLastSnapshotId();
       List<ClientProto.Operation> unsynced = storage.getUnsyncOps();
       ClientProto.SyncResponse res = currentConnector.sync(unsynced, lastSnapshotId);
-      if (res.getSyncResponse() == ClientProto.RepType.OK) {
+      if (res.getSyncResponse() == Common.RepType.OK) {
         storage.apply(res.getOpsList(), res.getSnapshotId());
         return new SyncResponse(res.getSnapshotId());
       } else {

@@ -17,6 +17,7 @@
 
 package org.dalvdb.service.client;
 
+import dalv.common.Common;
 import io.grpc.stub.StreamObserver;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SecurityException;
@@ -58,7 +59,7 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
       }
     } else {
       res = ClientProto.SyncResponse.newBuilder()
-          .setSyncResponse(ClientProto.RepType.UNRECOGNIZED).build();
+          .setSyncResponse(Common.RepType.UNRECOGNIZED).build();
     }
     responseObserver.onNext(res);
     responseObserver.onCompleted();
@@ -83,13 +84,13 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
     if (userLockManager.tryReadLock(userId, DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
       try {
         read(userId, request.getLastSnapshotId(), resBuilder);
-        resBuilder.setSyncResponse(ClientProto.RepType.OK);
+        resBuilder.setSyncResponse(Common.RepType.OK);
         return resBuilder.build();
       } finally {
         userLockManager.releaseReadLock(userId);
       }
     }
-    resBuilder.setSyncResponse(ClientProto.RepType.NOK);
+    resBuilder.setSyncResponse(Common.RepType.NOK);
     return resBuilder.build();
   }
 
@@ -99,14 +100,14 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
     if (userLockManager.tryWriteLock(userId, DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
       try {
         boolean updatesHandledSuccessfully = storage.handleOperations(userId, request.getOpsList(), request.getLastSnapshotId());
-        resBuilder.setSyncResponse(updatesHandledSuccessfully ? ClientProto.RepType.OK : ClientProto.RepType.NOK);
+        resBuilder.setSyncResponse(updatesHandledSuccessfully ? Common.RepType.OK : Common.RepType.NOK);
         read(userId, request.getLastSnapshotId(), resBuilder);
         return resBuilder.build();
       } finally {
         userLockManager.releaseWriteLock(userId);
       }
     }
-    resBuilder.setSyncResponse(ClientProto.RepType.NOK);
+    resBuilder.setSyncResponse(Common.RepType.NOK);
     return resBuilder.build();
   }
 

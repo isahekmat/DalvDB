@@ -1,4 +1,8 @@
 syntax = "proto3";
+import "common.proto";
+
+package dalv.backend;
+
 option java_package = "org.dalvdb.proto";
 option java_outer_classname = "BackendProto";
 option java_generate_equals_and_hash = true;
@@ -15,7 +19,8 @@ message GetRequest {
 }
 
 message GetResponse {
-  bytes value = 1;
+  dalv.common.RepType repType = 1;
+  bytes value = 2;
 }
 
 message PutRequest {
@@ -25,6 +30,7 @@ message PutRequest {
 }
 
 message PutResponse {
+  dalv.common.RepType repType = 1;
 }
 
 message DelRequest {
@@ -33,4 +39,5 @@ message DelRequest {
 }
 
 message DelResponse {
+  dalv.common.RepType repType = 1;
 }

@@ -18,6 +18,7 @@
 package org.dalvdb.client;
 
 import com.google.protobuf.ByteString;
+import dalv.common.Common;
 import org.dalvdb.client.conflict.resolver.AcceptServerResolver;
 import org.dalvdb.proto.ClientProto;
 import org.junit.Before;
@@ -56,7 +57,7 @@ public class DalvClientTest {
     ClientProto.SyncResponse response = ClientProto.SyncResponse.newBuilder()
         .setSnapshotId(1)
         .addOps(op)
-        .setSyncResponse(ClientProto.RepType.OK)
+        .setSyncResponse(Common.RepType.OK)
         .build();
 
     when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), anyInt()))
@@ -83,7 +84,7 @@ public class DalvClientTest {
     ClientProto.SyncResponse response = ClientProto.SyncResponse.newBuilder()
         .setSnapshotId(1)
         .addOps(opOnServer)
-        .setSyncResponse(ClientProto.RepType.NOK)
+        .setSyncResponse(Common.RepType.NOK)
         .build();
     when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), anyInt()))
         .thenReturn(response);
@@ -127,7 +128,7 @@ public class DalvClientTest {
         .setSnapshotId(1)
         .addOps(op1OnServer)
         .addOps(op2OnServer)
-        .setSyncResponse(ClientProto.RepType.NOK)
+        .setSyncResponse(Common.RepType.NOK)
         .build();
     when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), anyInt()))
         .thenReturn(response);
@@ -171,7 +172,7 @@ public class DalvClientTest {
         .setSnapshotId(1)
         .addOps(op1OnServer)
         .addOps(op2OnServer)
-        .setSyncResponse(ClientProto.RepType.NOK)
+        .setSyncResponse(Common.RepType.NOK)
         .build();
     when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), anyInt()))
         .thenReturn(response);
@@ -216,13 +217,13 @@ public class DalvClientTest {
         .setSnapshotId(1)
         .addOps(op1OnServer)
         .addOps(op2OnServer)
-        .setSyncResponse(ClientProto.RepType.NOK)
+        .setSyncResponse(Common.RepType.NOK)
         .build();
     when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), eq(0)))
         .thenReturn(response);
     ClientProto.SyncResponse response2 = ClientProto.SyncResponse.newBuilder()
         .setSnapshotId(2)
-        .setSyncResponse(ClientProto.RepType.OK)
+        .setSyncResponse(Common.RepType.OK)
         .build();
     when(mockConnector.sync(ArgumentMatchers.<ClientProto.Operation>anyList(), eq(1)))
         .thenReturn(response2);

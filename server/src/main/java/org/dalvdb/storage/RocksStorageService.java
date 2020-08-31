@@ -83,6 +83,17 @@ public class RocksStorageService implements StorageService {
     }
   }
 
+  @Override
+  public boolean addOperation(String userId, ClientProto.Operation operation) {
+    try {
+      byte[] key = userId.getBytes(Charset.defaultCharset());
+      rocksDB.merge(key, ByteUtil.opToByte(operation));
+      return true;
+    } catch (RocksDBException e) {
+      throw new InternalServerException(e);
+    }
+  }
+
   private boolean checkForConflict(List<ClientProto.Operation> oldOps,
                                    List<ClientProto.Operation> newOps) {
     if (oldOps.isEmpty()) return false;
