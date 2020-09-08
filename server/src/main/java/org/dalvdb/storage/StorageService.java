@@ -30,6 +30,7 @@ import java.util.List;
  * @see RocksStorageService the default implementation
  */
 public interface StorageService extends Closeable {
+
   /**
    * handle all operations for a user in an atomic way.
    *
@@ -40,7 +41,13 @@ public interface StorageService extends Closeable {
    */
   boolean handleOperations(String userId, List<Common.Operation> opsList, int lastSnapshotId);
 
-  boolean addOperation(String userId, Common.Operation operation);
+  /**
+   * add a single operation for a specific user
+   *
+   * @param userId    the user identification
+   * @param operation the operation to add
+   */
+  void addOperation(String userId, Common.Operation operation);
 
   /**
    * get the list of user's operations after the lastSnapshotId

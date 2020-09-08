@@ -83,12 +83,14 @@ public class RocksStorageService implements StorageService {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
-  public boolean addOperation(String userId, Common.Operation operation) {
+  public void addOperation(String userId, Common.Operation operation) {
     try {
       byte[] key = userId.getBytes(Charset.defaultCharset());
       rocksDB.merge(key, ByteUtil.opToByte(operation));
-      return true;
     } catch (RocksDBException e) {
       throw new InternalServerException(e);
     }
