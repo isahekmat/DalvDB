@@ -17,7 +17,7 @@
 
 package org.dalvdb.storage;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.ByteString;
 import dalv.common.Common;
 import org.dalvdb.DalvConfig;
 import org.dalvdb.common.util.ByteUtil;
@@ -109,18 +109,38 @@ public class RocksStorageService implements StorageService {
   public List<Common.Operation> get(String userId, int lastSnapshotId) {
     try {
       byte[] bytes = rocksDB.get(userId.getBytes(Charset.defaultCharset()));
-      LinkedList<Common.Operation> operations = ByteUtil.byteToOps(bytes);
-      Iterator<Common.Operation> operationIterator = operations.descendingIterator();
-      int i = operations.size();
+      Iterator<Common.Operation> operationIterator = ByteUtil.getReverseIterator(bytes);
+      LinkedList<Common.Operation> result = new LinkedList<>();
       while (operationIterator.hasNext()) {
         Common.Operation op = operationIterator.next();
         if (op.getType() == Common.OpType.SNAPSHOT && op.getSnapshotId() == lastSnapshotId) {
           break;
         }
-        i--;
+        result.addFirst(op);
       }
-      return operations.subList(i, operations.size());
-    } catch (InvalidProtocolBufferException | RocksDBException e) {
+      return result;
+    } catch (RocksDBException e) {
+      throw new InternalServerException(e);
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public ByteString getValue(String userId, String key) {
+    try {
+      Iterator<Common.Operation> reverseOpsIterator =
+          ByteUtil.getReverseIterator(rocksDB.get(userId.getBytes(Charset.defaultCharset())));
+      while (reverseOpsIterator.hasNext()) {
+        Common.Operation op = reverseOpsIterator.next();
+        if (op.getType() == Common.OpType.PUT && key.equals(op.getKey()))
+          return op.getVal();
+        if (op.getType() == Common.OpType.DEL && key.equals(op.getKey()))
+          return null;
+      }
+      return null;
+    } catch (RocksDBException e) {
       throw new InternalServerException(e);
     }
   }

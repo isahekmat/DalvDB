@@ -17,6 +17,7 @@
 
 package org.dalvdb.storage;
 
+import com.google.protobuf.ByteString;
 import dalv.common.Common;
 
 import java.io.Closeable;
@@ -49,6 +50,15 @@ public interface StorageService extends Closeable {
    * @return the list of user's operations which occur after the lastSnapshotId
    */
   List<Common.Operation> get(String userId, int lastSnapshotId);
+
+  /**
+   * get the value of a specific key for a user
+   *
+   * @param userId the user identification
+   * @param key    the key to query
+   * @return the value corresponding to the provided key
+   */
+  ByteString getValue(String userId, String key);
 
   /**
    * add a snapshot in the user's log and return the newly generated snapshot id

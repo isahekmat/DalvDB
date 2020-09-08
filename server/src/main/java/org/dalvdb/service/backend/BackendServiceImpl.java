@@ -17,6 +17,7 @@
 
 package org.dalvdb.service.backend;
 
+import com.google.protobuf.ByteString;
 import dalv.common.Common;
 import io.grpc.stub.StreamObserver;
 import org.dalvdb.DalvConfig;
@@ -40,32 +41,60 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
 
   @Override
   public void get(BackendProto.GetRequest request, StreamObserver<BackendProto.GetResponse> responseObserver) {
-    super.get(request, responseObserver);
+    try {
+      ByteString value = storageService.getValue(request.getUserId(), request.getKey());
+      BackendProto.GetResponse response = BackendProto.GetResponse.newBuilder()
+          .setRepType(value == null ? Common.RepType.NOK : Common.RepType.OK)
+          .setValue(value)
+          .build();
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+    } catch (InternalServerException e) {
+      logger.error(e.getMessage(), e);
+      responseObserver.onError(e);
+    }
   }
 
   @Override
   public void put(BackendProto.PutRequest request, StreamObserver<BackendProto.PutResponse> responseObserver) {
     try {
+      BackendProto.PutResponse response;
       if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
         storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
             .setKey(request.getKey())
             .setType(Common.OpType.PUT)
             .setVal(request.getValue())
             .build());
+        response = BackendProto.PutResponse.newBuilder().setRepType(Common.RepType.OK).build();
       } else {
-        responseObserver.onNext(BackendProto.PutResponse.newBuilder()
-            .setRepType(Common.RepType.NOK).build());
-        responseObserver.onCompleted();
+        response = BackendProto.PutResponse.newBuilder().setRepType(Common.RepType.NOK).build();
       }
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
     } catch (InternalServerException | InterruptedException e) {
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
     }
-
   }
 
   @Override
   public void del(BackendProto.DelRequest request, StreamObserver<BackendProto.DelResponse> responseObserver) {
-    super.del(request, responseObserver);
+    try {
+      BackendProto.DelResponse response;
+      if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
+        storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
+            .setKey(request.getKey())
+            .setType(Common.OpType.DEL)
+            .build());
+        response = BackendProto.DelResponse.newBuilder().setRepType(Common.RepType.OK).build();
+      } else {
+        response = BackendProto.DelResponse.newBuilder().setRepType(Common.RepType.NOK).build();
+      }
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+    } catch (InternalServerException | InterruptedException e) {
+      logger.error(e.getMessage(), e);
+      responseObserver.onError(e);
+    }
   }
 }

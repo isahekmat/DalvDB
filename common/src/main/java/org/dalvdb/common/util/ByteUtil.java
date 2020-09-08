@@ -20,34 +20,70 @@ package org.dalvdb.common.util;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import dalv.common.Common;
-import org.dalvdb.proto.ClientProto;
 
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 public class ByteUtil {
 
   public static LinkedList<Common.Operation> byteToOps(byte[] bytes) throws InvalidProtocolBufferException {
     LinkedList<Common.Operation> ops = new LinkedList<>();
-    int offset = 0;
     if (bytes == null) return ops;
-    while (offset < bytes.length) {
-      int len = ByteBuffer.wrap(bytes, offset, 4).getInt();
-      offset += 5;
+    int offset = bytes.length;
+    while (offset > 0) {
+      int len = ByteBuffer.wrap(bytes, offset - 4, 4).getInt();
+      offset -= len + 4;
       Common.Operation op = Common.Operation.parseFrom(ByteString.copyFrom(bytes, offset, len));
-      offset += len;
-      ops.add(op);
-      offset++;
+      ops.addFirst(op);
+      offset--;
     }
     return ops;
   }
 
   public static byte[] opToByte(Common.Operation op) {
     byte[] oprBytes = op.toByteArray();
-    byte[] result = new byte[5 + oprBytes.length];
-    System.arraycopy(ByteBuffer.allocate(4).putInt(oprBytes.length).array(), 0, result, 0, 4);
-    result[4] = (char) 0;
-    System.arraycopy(oprBytes, 0, result, 5, oprBytes.length);
+    byte[] result = new byte[oprBytes.length + 4];
+    byte[] lenArr = ByteBuffer.allocate(4).putInt(oprBytes.length).array();
+    System.arraycopy(oprBytes, 0, result, 0, oprBytes.length);
+    System.arraycopy(lenArr, 0, result, oprBytes.length, 4);
     return result;
+  }
+
+  public static Iterator<Common.Operation> getReverseIterator(byte[] recordsBytes) {
+    return new OperatorsReverseIterator(recordsBytes);
+  }
+
+  public static class OperatorsReverseIterator implements Iterator<Common.Operation> {
+    private final byte[] recordsBytes;
+    private int currentIndex;
+
+    public OperatorsReverseIterator(byte[] recordsBytes) {
+      this.recordsBytes = recordsBytes;
+      this.currentIndex = recordsBytes == null ? 0 : recordsBytes.length;
+    }
+
+    @Override
+    public boolean hasNext() {
+      return currentIndex > 0;
+    }
+
+    @Override
+    public Common.Operation next() {
+      int len = ByteBuffer.wrap(recordsBytes, currentIndex - 4, 4).getInt();
+      try {
+        Common.Operation op =
+            Common.Operation.parseFrom(ByteString.copyFrom(recordsBytes, currentIndex - (4 + len), len));
+        currentIndex -= len + 5;
+        return op;
+      } catch (InvalidProtocolBufferException e) {
+        throw new IllegalStateException(e);
+      }
+    }
+
+    @Override
+    public void remove() {
+      throw new IllegalStateException("Operation not supported");
+    }
   }
 }
