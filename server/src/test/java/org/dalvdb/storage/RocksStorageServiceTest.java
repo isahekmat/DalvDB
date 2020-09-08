@@ -28,6 +28,7 @@ import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -151,5 +152,38 @@ public class RocksStorageServiceTest {
     assertThat(ops2.size()).isEqualTo(3);
     assertThat(ops2.get(2)).isEqualTo(op3);
     storageService.delete("ali");
+  }
+
+  @Test
+  public void testGetValue() {
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey("name")
+        .setVal(ByteString.copyFrom("esa".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey("lname")
+        .setVal(ByteString.copyFrom("hekmat".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.DEL)
+        .setKey("lname")
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.SNAPSHOT)
+        .setSnapshotId(1)
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey("age")
+        .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(30).array()))
+        .build());
+    assertThat(storageService.getValue("esa", "name").toString(Charset.defaultCharset()))
+        .isEqualTo("esa");
+    assertThat(storageService.getValue("esa", "lname")).isNull();
+    assertThat(ByteBuffer.wrap(storageService.getValue("esa", "age").toByteArray()).getInt())
+        .isEqualTo(30);
+    storageService.delete("esa");
   }
 }
