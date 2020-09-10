@@ -11,6 +11,7 @@ service BackendServer {
   rpc get (GetRequest) returns (GetResponse){}
   rpc put (PutRequest) returns (PutResponse){}
   rpc del (DelRequest) returns (DelResponse){}
+  rpc watch(WatchRequest) returns (stream WatchResponse){}
 }
 
 message GetRequest {
@@ -40,4 +41,13 @@ message DelRequest {
 
 message DelResponse {
   dalv.common.RepType repType = 1;
+}
+
+message WatchRequest{
+  repeated string keys = 1;
+}
+
+message WatchResponse{
+  string userId = 1;
+  dalv.common.Operation operation = 2;
 }

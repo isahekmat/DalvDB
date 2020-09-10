@@ -33,9 +33,11 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
   private static final Logger logger = LoggerFactory.getLogger(BackendServiceImpl.class);
   private final StorageService storageService;
   private final UserLockManager userLockManager;
+  private final WatchManager watchManager;
 
-  public BackendServiceImpl(StorageService storageService) {
+  public BackendServiceImpl(StorageService storageService, WatchManager watchManager) {
     this.storageService = storageService;
+    this.watchManager = watchManager;
     this.userLockManager = UserLockManager.getInstance();
   }
 
@@ -96,5 +98,10 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
     }
+  }
+
+  @Override
+  public void watch(BackendProto.WatchRequest request, StreamObserver<BackendProto.WatchResponse> responseObserver) {
+    watchManager.addWatch(request.getKeysList(), responseObserver);
   }
 }

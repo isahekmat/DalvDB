@@ -32,10 +32,10 @@ public class BackendService implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(BackendService.class);
   private final Server server;
 
-  public BackendService(StorageService storageService) {
+  public BackendService(StorageService storageService, WatchManager watchManager) {
     final int port = DalvConfig.getInt(DalvConfig.BACKEND_PORT);
     server = ServerBuilder.forPort(port)
-        .addService(new BackendServiceImpl(storageService)).build();
+        .addService(new BackendServiceImpl(storageService, watchManager)).build();
     try {
       server.start();
     } catch (IOException e) {

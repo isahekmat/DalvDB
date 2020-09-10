@@ -43,6 +43,7 @@ public final class DalvConfig {
   public static final String LOCK_TIMEOUT = "lock.timeout";
   public static final String LOCK_SIZE_THRESHOLD = "lock.size.threshold";
   public static final String BACKEND_PORT = "backend.port";
+  public static final String WATCHER_THREAD_NUM = "watcher.thread.num";
 
   //Environment Variable
   private static final String DALV_CONFIG = "DALV_CONFIG";
@@ -61,6 +62,7 @@ public final class DalvConfig {
     config.put(LOCK_TIMEOUT, 200);
     config.put(LOCK_SIZE_THRESHOLD, 200);
     config.put(BACKEND_PORT, 7470);
+    config.put(WATCHER_THREAD_NUM, 3);
   }
 
   private DalvConfig() {

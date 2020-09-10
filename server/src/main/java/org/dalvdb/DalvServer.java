@@ -19,6 +19,8 @@ package org.dalvdb;
 
 
 import org.dalvdb.service.backend.BackendService;
+import org.dalvdb.service.backend.BackendWatchManager;
+import org.dalvdb.service.backend.WatchManager;
 import org.dalvdb.service.client.ClientService;
 import org.dalvdb.storage.RocksStorageService;
 import org.dalvdb.storage.StorageService;
@@ -48,8 +50,9 @@ public class DalvServer implements Closeable {
       this.cluster = new DalvCluster();
     else
       this.cluster = null;
-    this.clientService = new ClientService(this.storageService);
-    this.backendService = new BackendService(this.storageService);
+    WatchManager watchManager = new BackendWatchManager();
+    this.clientService = new ClientService(this.storageService, watchManager);
+    this.backendService = new BackendService(this.storageService, watchManager);
     logger.info("Dalv server started up");
   }
 

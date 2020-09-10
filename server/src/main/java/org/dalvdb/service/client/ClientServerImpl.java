@@ -26,6 +26,7 @@ import org.dalvdb.exception.InternalServerException;
 import org.dalvdb.lock.UserLockManager;
 import org.dalvdb.proto.ClientProto;
 import org.dalvdb.proto.ClientServerGrpc;
+import org.dalvdb.service.backend.WatchManager;
 import org.dalvdb.storage.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,12 +38,14 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
   private static final Logger logger = LoggerFactory.getLogger(ClientServerImpl.class);
   private final StorageService storage;
   private final UserLockManager userLockManager;
+  private final WatchManager watchManager;
   private final JwtParser parser = Jwts.parserBuilder()
       .setSigningKey(DalvConfig.getStr(DalvConfig.JWT_SIGN)).build();
 
-  public ClientServerImpl(StorageService storage) {
+  public ClientServerImpl(StorageService storage, WatchManager watchManager) {
     this.storage = storage;
     this.userLockManager = UserLockManager.getInstance();
+    this.watchManager = watchManager;
   }
 
   @Override
@@ -57,12 +60,15 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
         logger.error(e.getMessage(), e);
         responseObserver.onError(e);
       }
+      responseObserver.onNext(res);
+      responseObserver.onCompleted();
+      watchManager.notifyChange(userId,request.getOpsList());
     } else {
       res = ClientProto.SyncResponse.newBuilder()
           .setSyncResponse(Common.RepType.UNRECOGNIZED).build();
+      responseObserver.onNext(res);
+      responseObserver.onCompleted();
     }
-    responseObserver.onNext(res);
-    responseObserver.onCompleted();
   }
 
   private ClientProto.SyncResponse handleSync(String userId, ClientProto.SyncRequest request)
