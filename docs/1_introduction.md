@@ -16,6 +16,8 @@ location to reduce read latency.
 By storing a replica of the user data on him/her client's device, this method improve user experience as it reduces read/write latency.
 It also decreases servers workload by acts like a cache in the user device. 
 
+![DalvDB overview](images/overview.svg "DalvDB Overview")
+
 ## Use Cases
 DalvDB could be used as a side data-store for some specific data. it can also be the only data-store of a user centric 
 online service, for example, an Online Calendar service. Additionally, DalvDB could be used as client side cache 
