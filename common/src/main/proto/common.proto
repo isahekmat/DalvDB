@@ -18,5 +18,6 @@ enum OpType {
   PUT = 0;
   DEL = 1;
   ADD_TO_LIST = 2;
-  SNAPSHOT = 3;
+  REMOVE_FROM_LIST = 3;
+  SNAPSHOT = 4;
 }

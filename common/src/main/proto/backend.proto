@@ -11,6 +11,8 @@ service BackendServer {
   rpc get (GetRequest) returns (GetResponse){}
   rpc put (PutRequest) returns (PutResponse){}
   rpc del (DelRequest) returns (DelResponse){}
+  rpc addToList(AddToListRequest) returns (AddToListResponse){}
+  rpc removeFromList(RemoveFromListRequest) returns (RemoveFromListResponse){}
   rpc watch(WatchRequest) returns (stream WatchResponse){}
 }
 
@@ -40,6 +42,26 @@ message DelRequest {
 }
 
 message DelResponse {
+  dalv.common.RepType repType = 1;
+}
+
+message AddToListRequest {
+  string userId = 1;
+  string listKey = 2;
+  bytes value = 3;
+}
+
+message AddToListResponse {
+  dalv.common.RepType repType = 1;
+}
+
+message RemoveFromListRequest {
+  string userId = 1;
+  string listKey = 2;
+  bytes value = 3;
+}
+
+message RemoveFromListResponse {
   dalv.common.RepType repType = 1;
 }
 

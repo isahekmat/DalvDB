@@ -11,6 +11,7 @@ option java_generate_equals_and_hash = true;
 
 service ClientServer {
   rpc sync (SyncRequest) returns (SyncResponse){}
+  rpc watch(WatchRequest) returns (stream WatchResponse){}
 }
 
 message SyncRequest {
@@ -23,4 +24,12 @@ message SyncResponse {
   common.RepType syncResponse = 1;
   uint32 snapshotId = 2;
   repeated common.Operation ops = 3;
+}
+
+message WatchRequest{
+  repeated string keys = 1;
+}
+
+message WatchResponse{
+  dalv.common.Operation operation = 1;
 }
