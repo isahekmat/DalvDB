@@ -64,6 +64,20 @@ public class DalvServer implements Closeable {
    * @param args command line argument which could indicate the configuration file
    */
   public static void main(String[] args) {
+    final DalvServer server = startServer(args);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      try {
+        server.close();
+      } catch (IOException e) {
+        logger.error("error while shutting down", e);
+      }
+    }));
+  }
+
+  /**
+   * This is an internal method which is public just for the integration tests
+   */
+  public static DalvServer startServer(String[] args) {
     try {
       if (args.length == 0)
         DalvConfig.loadFromEnvironmentVariable();
@@ -80,14 +94,7 @@ public class DalvServer implements Closeable {
       System.exit(1);
     }
 
-    final DalvServer server = new DalvServer();
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-      try {
-        server.close();
-      } catch (IOException e) {
-        logger.error("error while shutting down", e);
-      }
-    }));
+    return new DalvServer();
   }
 
   /**

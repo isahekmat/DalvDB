@@ -23,12 +23,14 @@ import org.dalvdb.client.conflict.Conflict;
 import org.dalvdb.client.conflict.ConflictResolver;
 import org.dalvdb.proto.ClientProto;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-public class DalvClient {
+public class DalvClient implements Closeable {
   private final List<DalvConnector> connectors;
   private final Storage storage;
   private final Object syncLock = new Object();
@@ -144,5 +146,10 @@ public class DalvClient {
       map.put(op.getKey(), val);
     } else
       val.add(op);
+  }
+
+  @Override
+  public void close() throws IOException {
+    this.storage.close();
   }
 }
