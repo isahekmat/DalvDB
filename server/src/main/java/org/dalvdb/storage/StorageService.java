@@ -50,11 +50,11 @@ public interface StorageService extends Closeable {
   void addOperation(String userId, Common.Operation operation);
 
   /**
-   * get the list of user's operations after the lastSnapshotId
+   * get the list of operations for a user after the lastSnapshotId
    *
    * @param userId         the user identification
-   * @param lastSnapshotId last snapshotId seen by user
-   * @return the list of user's operations which occur after the lastSnapshotId
+   * @param lastSnapshotId return operations after this snapshot
+   * @return the list of operations for a specific user which occur after the lastSnapshotId
    */
   List<Common.Operation> get(String userId, int lastSnapshotId);
 

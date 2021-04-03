@@ -53,22 +53,22 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
     String jwt = request.getJwt();
     String userId = validate(jwt);
     ClientProto.SyncResponse res = null;
-    if (Objects.nonNull(userId)) {
-      try {
-        res = handleSync(userId, request);
-      } catch (InternalServerException e) {
-        logger.error(e.getMessage(), e);
-        responseObserver.onError(e);
-      }
-      responseObserver.onNext(res);
-      responseObserver.onCompleted();
-      watchManager.notifyChange(userId,request.getOpsList());
-    } else {
+    if (Objects.isNull(userId)) {
       res = ClientProto.SyncResponse.newBuilder()
           .setSyncResponse(Common.RepType.UNRECOGNIZED).build();
       responseObserver.onNext(res);
       responseObserver.onCompleted();
+      return;
     }
+    try {
+      res = handleSync(userId, request);
+    } catch (InternalServerException e) {
+      logger.error(e.getMessage(), e);
+      responseObserver.onError(e);
+    }
+    responseObserver.onNext(res);
+    responseObserver.onCompleted();
+    watchManager.notifyChange(userId,request.getOpsList());
   }
 
   private ClientProto.SyncResponse handleSync(String userId, ClientProto.SyncRequest request)

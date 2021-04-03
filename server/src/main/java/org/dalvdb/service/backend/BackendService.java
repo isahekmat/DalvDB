@@ -58,6 +58,7 @@ public class BackendService implements Closeable {
     if (server != null) {
       try {
         server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
+        logger.info("Server closed gracefully");
       } catch (InterruptedException e) {
         logger.error(e.getMessage(), e);
       }

@@ -35,7 +35,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * Singleton class that its single instance keep a list of {@link ReadWriteLock} for users. each user has a single lock
  * It acts as a LRU cache, and delete locks once the number of locks reach the threshold, however, it does not delete
- * any locks that that currently hold.
+ * any currently held lock.
  */
 public class UserLockManager {
   private static UserLockManager instance;

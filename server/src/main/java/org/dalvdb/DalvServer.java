@@ -50,6 +50,7 @@ public class DalvServer implements Closeable {
       this.cluster = new DalvCluster();
     else
       this.cluster = null;
+    //TODO should be changed to handle clients watches also
     WatchManager watchManager = new BackendWatchManager();
     this.clientService = new ClientService(this.storageService, watchManager);
     this.backendService = new BackendService(this.storageService, watchManager);
