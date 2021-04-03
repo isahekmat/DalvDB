@@ -21,7 +21,7 @@ It also decreases servers workload by acts like a cache in the user device.
 ## Use Cases
 DalvDB could be used as a side data-store for some specific data. it can also be the only data-store of a user centric 
 online service, for example, an Online Calendar service. Additionally, DalvDB could be used as client side cache 
-mechanism which the client just read data from it and update it on some basis.  
+mechanism which the client just read data from it and updates could come from the server over synchronization.  
 
 There are several examples of use cases which user owns the data and only user has the permission to change it.
 The use cases include but not limited to:

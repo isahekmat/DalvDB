@@ -1,9 +1,9 @@
 # BackEnd API
 ## Authentication
 TODO
-## Update Data
+## Update command
 TODO
-## Query Data
+## Get command
 TODO
-## Watching Data
+## Watch command
 TODO
