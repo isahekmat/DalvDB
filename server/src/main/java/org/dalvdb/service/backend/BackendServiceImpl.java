@@ -101,6 +101,50 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
   }
 
   @Override
+  public void addToList(BackendProto.AddToListRequest request, StreamObserver<BackendProto.AddToListResponse> responseObserver) {
+    try {
+      BackendProto.AddToListResponse response;
+      if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
+        storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
+            .setKey(request.getListKey())
+            .setType(Common.OpType.ADD_TO_LIST)
+            .setVal(request.getValue())
+            .build());
+        response = BackendProto.AddToListResponse.newBuilder().setRepType(Common.RepType.OK).build();
+      } else {
+        response = BackendProto.AddToListResponse.newBuilder().setRepType(Common.RepType.NOK).build();
+      }
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+    } catch (InternalServerException | InterruptedException e) {
+      logger.error(e.getMessage(), e);
+      responseObserver.onError(e);
+    }
+  }
+
+  @Override
+  public void removeFromList(BackendProto.RemoveFromListRequest request, StreamObserver<BackendProto.RemoveFromListResponse> responseObserver) {
+    try {
+      BackendProto.RemoveFromListResponse response;
+      if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
+        storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
+            .setKey(request.getListKey())
+            .setType(Common.OpType.REMOVE_FROM_LIST)
+            .setVal(request.getValue())
+            .build());
+        response = BackendProto.RemoveFromListResponse.newBuilder().setRepType(Common.RepType.OK).build();
+      } else {
+        response = BackendProto.RemoveFromListResponse.newBuilder().setRepType(Common.RepType.NOK).build();
+      }
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+    } catch (InternalServerException | InterruptedException e) {
+      logger.error(e.getMessage(), e);
+      responseObserver.onError(e);
+    }
+  }
+
+  @Override
   public void watch(BackendProto.WatchRequest request, StreamObserver<BackendProto.WatchResponse> responseObserver) {
     watchManager.addWatch(request.getKeysList(), responseObserver);
   }
