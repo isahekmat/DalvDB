@@ -15,29 +15,31 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+package org.dalvdb.it;
+
 import org.apache.commons.io.FileUtils;
 import org.dalvdb.DalvServer;
 import org.dalvdb.client.DalvClient;
 import org.dalvdb.client.DalvClientBuilder;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 
-public class SimpleServerClientIT {
-  private DalvServer server;
-  private DalvClient client;
+public abstract class BaseITTest {
+  protected DalvServer server;
+  protected DalvClient client;
+  protected org.dalvdb.backend.DalvClient backend;
 
   @Before
   public void setUp() throws IOException {
     server = DalvServer.startServer(new String[]{"testServer.config"});
     setupClient();
+    backend = new org.dalvdb.backend.DalvClient(new String[]{"localhost:7470"});
   }
 
-  private void setupClient() throws IOException {
+  protected void setupClient() throws IOException {
     FileUtils.forceMkdir(new File("test-client-data"));
     client = new DalvClientBuilder().dataDir("test-client-data")
         .serverAddresses("localhost:7472")
@@ -51,29 +53,5 @@ public class SimpleServerClientIT {
     client.close();
     FileUtils.deleteDirectory(new File("test-data"));
     FileUtils.deleteDirectory(new File("test-client-data"));
-  }
-
-  @Test
-  public void clientsUpdatesAndGets() throws IOException {
-    client.put("name", "Isa".getBytes());
-    client.sync();
-    Assert.assertEquals(new String(client.get("name")), "Isa");
-
-    //delete the data directory and sync again to see the value still exist
-    client.close();
-    FileUtils.deleteDirectory(new File("test-client-data"));
-    setupClient();
-    Assert.assertEquals(client.get("name").length, 0);
-    client.sync();
-    Assert.assertEquals(new String(client.get("name")), "Isa");
-  }
-
-  @Test
-  public void clientsUpdateAndDelete() {
-    client.put("name", "Hassan".getBytes());
-    client.sync();
-    Assert.assertEquals(new String(client.get("name")), "Hassan");
-    client.delete("name");
-    Assert.assertEquals(client.get("name").length, 0);
   }
 }
