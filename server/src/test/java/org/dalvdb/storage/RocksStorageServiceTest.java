@@ -179,11 +179,14 @@ public class RocksStorageServiceTest {
         .setKey("age")
         .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(30).array()))
         .build());
-    assertThat(storageService.getValue("esa", "name").toString(Charset.defaultCharset()))
-        .isEqualTo("esa");
+    ByteString res = storageService.getValue("esa", "name");
+    assertThat(ByteBuffer.wrap(res.toByteArray(),0,4).getInt()).isEqualTo(3);
+    assertThat(res.substring(4).toString(Charset.defaultCharset())).isEqualTo("esa");
     assertThat(storageService.getValue("esa", "lname")).isNull();
-    assertThat(ByteBuffer.wrap(storageService.getValue("esa", "age").toByteArray()).getInt())
-        .isEqualTo(30);
+    assertThat(ByteBuffer.wrap(storageService.getValue("esa", "age").toByteArray(),0,4)
+        .getInt()).isEqualTo(4);
+    assertThat(ByteBuffer.wrap(storageService.getValue("esa", "age").toByteArray(),4,4)
+        .getInt()).isEqualTo(30);
     storageService.delete("esa");
   }
 }

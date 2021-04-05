@@ -21,6 +21,9 @@ import com.google.protobuf.ByteString;
 import dalv.common.Common;
 import org.dalvdb.proto.BackendProto;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -49,11 +52,28 @@ public class DalvClient {
     return currentConnector.del(userId, key).getRepType() == Common.RepType.OK;
   }
 
-  public boolean get(String userId, String key, byte[] responseBuffer, int offset) {
+  public List<byte[]> getAsList(String userId, String key) {
     BackendProto.GetResponse res = currentConnector.get(userId, key);
-    if (res.getRepType() == Common.RepType.OK)
-      res.getValue().copyTo(responseBuffer, offset);
-    return res.getRepType() == Common.RepType.OK;
+    if (res.getRepType() != Common.RepType.OK)
+      return null;
+    byte[] bytes = res.getValue().toByteArray();
+    if (bytes == null || bytes.length == 0) return null;
+    List<byte[]> list = new ArrayList<>();
+    int currentIndex = 0;
+    while (currentIndex < bytes.length) {
+      int len = ByteBuffer.wrap(bytes, currentIndex, 4).getInt();
+      currentIndex += 4;
+      list.add(Arrays.copyOfRange(bytes, currentIndex, currentIndex + len));
+      currentIndex += len;
+    }
+    return list;
+  }
+
+  public byte[] get(String userId, String key) {
+    List<byte[]> single = getAsList(userId, key);
+    if (single == null || single.isEmpty()) return null;
+    if (single.size() > 1) throw new IllegalStateException();
+    return single.get(0);
   }
 
   public boolean addToList(String userId, String listKey, byte[] value) {

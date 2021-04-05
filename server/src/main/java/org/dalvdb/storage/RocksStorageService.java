@@ -28,10 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -134,17 +131,48 @@ public class RocksStorageService implements StorageService {
     try {
       Iterator<Common.Operation> reverseOpsIterator =
           ByteUtil.getReverseIterator(rocksDB.get(userId.getBytes(Charset.defaultCharset())));
+
+      Set<ByteString> additionToList = new HashSet<>();
+      Set<ByteString> deletionFromList = new HashSet<>();
+
+      int resultLen = 0;
       while (reverseOpsIterator.hasNext()) {
         Common.Operation op = reverseOpsIterator.next();
-        if (op.getType() == Common.OpType.PUT && key.equals(op.getKey()))
-          return op.getVal();
-        if (op.getType() == Common.OpType.DEL && key.equals(op.getKey()))
-          return null;
+        if (key.equals(op.getKey())) {
+          switch (op.getType()) {
+            case PUT:
+              additionToList.add(op.getVal());
+              resultLen += op.getVal().size();
+              return constructValue(additionToList, resultLen);
+            case DEL:
+              return constructValue(additionToList, resultLen);
+            case ADD_TO_LIST:
+              if (!deletionFromList.contains(op.getVal())) {
+                resultLen += op.getVal().size();
+                additionToList.add(op.getVal());
+              }
+              break;
+            case REMOVE_FROM_LIST:
+              deletionFromList.add(op.getVal());
+              break;
+          }
+        }
       }
-      return null;
+      return constructValue(additionToList, resultLen);
     } catch (RocksDBException e) {
       throw new InternalServerException(e);
     }
+  }
+
+  private ByteString constructValue(Set<ByteString> vals, int len) {
+    if (vals.isEmpty()) return null;
+    //bufferSize = (total values len) + (4 byte for each value len)
+    ByteBuffer buffer = ByteBuffer.allocate(len + 4*(vals.size()));
+    for (ByteString val : vals) {
+      buffer.putInt(val.size());
+      buffer.put(val.toByteArray());
+    }
+    return ByteString.copyFrom(buffer.array());
   }
 
   /**
