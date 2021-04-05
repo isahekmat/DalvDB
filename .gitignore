@@ -4,3 +4,4 @@ target/
 *.class
 .dalv-data/
 .client-data/
+.dalv.log
