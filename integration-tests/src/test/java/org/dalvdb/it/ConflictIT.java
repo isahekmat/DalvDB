@@ -18,8 +18,9 @@
 package org.dalvdb.it;
 
 import org.dalvdb.client.conflict.resolver.AcceptServerResolver;
-import org.junit.Assert;
 import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class ConflictIT extends BaseITTest {
 
@@ -27,9 +28,9 @@ public class ConflictIT extends BaseITTest {
   public void acceptServerConflictResolver() {
     backend.put("esa", "name", "Esa".getBytes());
     client.put("name", "esa".getBytes());
-    Assert.assertEquals(new String(client.get("name")), "esa");
+    assertThat(new String(client.get("name"))).isEqualTo("esa");
     client.sync(new AcceptServerResolver());
-    Assert.assertEquals(new String(client.get("name")), "Esa");
+    assertThat(new String(client.get("name"))).isEqualTo("Esa");
   }
 
 }
