@@ -15,8 +15,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dalvdb.it;import org.dalvdb.client.conflict.resolver.AcceptServerResolver;
-import org.dalvdb.it.BaseITTest;
+package org.dalvdb.it;
+
+import org.dalvdb.client.conflict.resolver.AcceptServerResolver;
 import org.junit.Assert;
 import org.junit.Test;
 

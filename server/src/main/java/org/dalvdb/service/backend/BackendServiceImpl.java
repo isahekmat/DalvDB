@@ -44,6 +44,7 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
   @Override
   public void get(BackendProto.GetRequest request, StreamObserver<BackendProto.GetResponse> responseObserver) {
     try {
+      logger.debug("GET command received: userId:{} key:{}", request.getUserId(), request.getKey());
       ByteString value = storageService.getValue(request.getUserId(), request.getKey());
       BackendProto.GetResponse response = BackendProto.GetResponse.newBuilder()
           .setRepType(value == null ? Common.RepType.NOK : Common.RepType.OK)
@@ -60,6 +61,7 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
   @Override
   public void put(BackendProto.PutRequest request, StreamObserver<BackendProto.PutResponse> responseObserver) {
     try {
+      logger.debug("PUT command received: userId:{} key:{}", request.getUserId(), request.getKey());
       BackendProto.PutResponse response;
       if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
         storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
@@ -82,6 +84,7 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
   @Override
   public void del(BackendProto.DelRequest request, StreamObserver<BackendProto.DelResponse> responseObserver) {
     try {
+      logger.debug("DEL command received: userId:{} key:{}", request.getUserId(), request.getKey());
       BackendProto.DelResponse response;
       if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
         storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
@@ -103,6 +106,7 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
   @Override
   public void addToList(BackendProto.AddToListRequest request, StreamObserver<BackendProto.AddToListResponse> responseObserver) {
     try {
+      logger.debug("ADD_TO_LIST command received: userId:{} listKey:{}",request.getUserId(),request.getListKey());
       BackendProto.AddToListResponse response;
       if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
         storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
@@ -125,6 +129,7 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
   @Override
   public void removeFromList(BackendProto.RemoveFromListRequest request, StreamObserver<BackendProto.RemoveFromListResponse> responseObserver) {
     try {
+      logger.debug("REMOVE_FROM_LIST command received: userId:{} listKey:{}",request.getUserId(),request.getListKey());
       BackendProto.RemoveFromListResponse response;
       if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
         storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
@@ -146,6 +151,7 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
 
   @Override
   public void watch(BackendProto.WatchRequest request, StreamObserver<BackendProto.WatchResponse> responseObserver) {
+    logger.debug("WATCH command received: keys:{}",request.getKeysList().listIterator());
     watchManager.addWatch(request.getKeysList(), responseObserver);
   }
 }

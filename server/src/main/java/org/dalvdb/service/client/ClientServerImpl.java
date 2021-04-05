@@ -52,6 +52,8 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
   public void sync(ClientProto.SyncRequest request, StreamObserver<ClientProto.SyncResponse> responseObserver) {
     String jwt = request.getJwt();
     String userId = validate(jwt);
+    logger.debug("SYNC command received: userId:{}, lastSnapshotId:{}, operations:{}",
+        userId, request.getLastSnapshotId(), request.getOpsList());
     ClientProto.SyncResponse res = null;
     if (Objects.isNull(userId)) {
       res = ClientProto.SyncResponse.newBuilder()
@@ -68,7 +70,7 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
     }
     responseObserver.onNext(res);
     responseObserver.onCompleted();
-    watchManager.notifyChange(userId,request.getOpsList());
+    watchManager.notifyChange(userId, request.getOpsList());
   }
 
   private ClientProto.SyncResponse handleSync(String userId, ClientProto.SyncRequest request)
