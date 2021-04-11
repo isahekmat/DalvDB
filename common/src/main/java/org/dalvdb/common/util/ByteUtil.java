@@ -22,8 +22,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import dalv.common.Common;
 
 import java.nio.ByteBuffer;
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.*;
 
 public class ByteUtil {
 
@@ -48,6 +47,28 @@ public class ByteUtil {
     System.arraycopy(oprBytes, 0, result, 0, oprBytes.length);
     System.arraycopy(lenArr, 0, result, oprBytes.length, 4);
     return result;
+  }
+
+  private static List<byte[]> decodeList(byte[] bytes, boolean hasSeparator) {
+    if (bytes == null || bytes.length == 0) return null;
+    List<byte[]> list = new ArrayList<>();
+    int currentIndex = 0;
+    while (currentIndex < bytes.length) {
+      int len = ByteBuffer.wrap(bytes, currentIndex, 4).getInt();
+      currentIndex += 4;
+      list.add(Arrays.copyOfRange(bytes, currentIndex, currentIndex + len));
+      currentIndex += len;
+      if (hasSeparator) currentIndex++;
+    }
+    return list;
+  }
+
+  public static List<byte[]> decodeList(byte[] bytes) {
+    return decodeList(bytes, false);
+  }
+
+  public static List<byte[]> decodeListWithSeparator(byte[] bytes) {
+    return decodeList(bytes, true);
   }
 
   public static Iterator<Common.Operation> getReverseIterator(byte[] recordsBytes) {

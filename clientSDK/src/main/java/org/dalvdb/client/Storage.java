@@ -25,6 +25,7 @@ import org.rocksdb.*;
 
 import java.io.Closeable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 
 public class Storage implements Closeable {
@@ -95,7 +96,7 @@ public class Storage implements Closeable {
     }
   }
 
-  public void put(Common.Operation op) {
+  public void apply(Common.Operation op) {
     WriteBatch wb = new WriteBatch();
     try {
       handleOperation(op, wb);
@@ -116,12 +117,44 @@ public class Storage implements Closeable {
 
   private void handleOperation(Common.Operation op, WriteBatch wb) {
     try {
-      if (op.getType() == Common.OpType.PUT)
-        wb.put(op.getKey().getBytes(), op.getVal().toByteArray());
-      else if (op.getType() == Common.OpType.DEL)
-        wb.delete(op.getKey().getBytes());
-      else if (op.getType() == Common.OpType.ADD_TO_LIST) {
-        //TODO
+      switch (op.getType()) {
+        case SNAPSHOT:
+          break;
+        case PUT:
+          wb.put(op.getKey().getBytes(),
+              ByteBuffer.allocate(4 + op.getVal().size()).putInt(op.getVal().size()).put(op.getVal().toByteArray()).array());
+          break;
+        case DEL:
+          wb.delete(op.getKey().getBytes());
+          break;
+        case ADD_TO_LIST:
+          wb.merge(op.getKey().getBytes(),
+              ByteBuffer.allocate(4 + op.getVal().size()).putInt(op.getVal().size()).put(op.getVal().toByteArray()).array());
+          break;
+        case REMOVE_FROM_LIST:
+          byte[] bytes = rocksDB.get(op.getKey().getBytes());
+          List<byte[]> values = ByteUtil.decodeListWithSeparator(bytes);
+          if (values == null) return;
+          byte[] valueToRemove = op.getVal().toByteArray();
+          int newSize = bytes.length - (5 + op.getVal().size()); //5 == 4(len size) + 1(separator)
+
+          ByteBuffer newVal = ByteBuffer.allocate(newSize);
+          boolean exist = false;
+          boolean first = true;
+          for (byte[] b : values) {
+            if (!Arrays.equals(b, valueToRemove) && newVal.position() <= newSize) {
+              if (first)
+                first = false;
+              else
+                newVal.put((byte) (0)); //merge separator
+              newVal.putInt(b.length);
+              newVal.put(b);
+            } else exist = true;
+          }
+          if (exist) wb.put(op.getKey().getBytes(), newVal.array());
+          break;
+        default:
+          throw new IllegalArgumentException("Invalid Operation");
       }
     } catch (RocksDBException e) {
       throw new StorageException(e);

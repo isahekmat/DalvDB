@@ -249,7 +249,7 @@ public class DalvClientTest {
         .setVal(ByteString.copyFrom("esa".getBytes()))
         .build();
     client.put("name", "esa".getBytes());
-    Mockito.verify(mockStorage).put(Mockito.eq(op));
+    Mockito.verify(mockStorage).apply(Mockito.eq(op));
   }
 
   @Test
@@ -259,7 +259,7 @@ public class DalvClientTest {
         .setKey("name")
         .build();
     client.delete("name");
-    Mockito.verify(mockStorage).put(Mockito.eq(op));
+    Mockito.verify(mockStorage).apply(Mockito.eq(op));
   }
 
   @Test

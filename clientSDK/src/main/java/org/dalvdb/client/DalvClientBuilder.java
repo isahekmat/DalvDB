@@ -17,8 +17,6 @@
 
 package org.dalvdb.client;
 
-import org.dalvdb.client.conflict.resolver.AcceptServerResolver;
-
 import java.util.LinkedList;
 import java.util.List;
 
@@ -56,18 +54,6 @@ public class DalvClientBuilder {
     for (String address : addressArr)
       connectors.add(new DalvConnector(address, accessToken));
     return new DalvClient(connectors, new Storage(dataDir));
-  }
-
-  public static void main(String[] args) {
-    DalvClientBuilder builder = new DalvClientBuilder("localhost:7472",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlc2EifQ.Gd3BoQIu3tAX2rxlKsgUMJkG38MbDZxoYmKOQfJ9N4g",
-        ".client-data");
-    DalvClient client = builder.build();
-    client.put("theme", "blue".getBytes());
-    client.sync(new AcceptServerResolver());
-
-    System.out.println(new String(client.get("theme")));
-    System.out.println("Done");
   }
 
 }

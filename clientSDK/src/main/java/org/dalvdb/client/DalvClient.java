@@ -21,10 +21,10 @@ import com.google.protobuf.ByteString;
 import dalv.common.Common;
 import org.dalvdb.client.conflict.Conflict;
 import org.dalvdb.client.conflict.ConflictResolver;
+import org.dalvdb.common.util.ByteUtil;
 import org.dalvdb.proto.ClientProto;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -87,7 +87,7 @@ public class DalvClient implements Closeable {
         .setType(Common.OpType.PUT)
         .build();
     synchronized (syncLock) {
-      storage.put(op);
+      storage.apply(op);
     }
   }
 
@@ -97,15 +97,19 @@ public class DalvClient implements Closeable {
         .setType(Common.OpType.DEL)
         .build();
     synchronized (syncLock) {
-      storage.put(op);
+      storage.apply(op);
     }
   }
 
-  public byte[] get(String key) {
+  public List<byte[]> getAsList(String key) {
     byte[] bytes = storage.get(key);
-    if (bytes == null)
-      return new byte[0];
-    return bytes;
+    return ByteUtil.decodeList(bytes);
+  }
+
+  public byte[] get(String key) {
+    List<byte[]> single = getAsList(key);
+    if (single == null || single.size() != 1) return null;
+    return single.get(0);
   }
 
   private SyncResponse extractConflicts(List<Common.Operation> unsynced,
@@ -149,7 +153,7 @@ public class DalvClient implements Closeable {
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     this.storage.close();
   }
 }

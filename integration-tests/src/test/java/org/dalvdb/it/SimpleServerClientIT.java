@@ -39,7 +39,7 @@ public class SimpleServerClientIT extends BaseITTest {
     client.close();
     FileUtils.deleteDirectory(new File("test-client-data"));
     setupClient();
-    assertThat(client.get("name").length).isEqualTo(0);
+    assertThat(client.get("name")).isNull();
     client.sync();
     assertThat(new String(client.get("name"))).isEqualTo("Isa");
   }
@@ -50,7 +50,7 @@ public class SimpleServerClientIT extends BaseITTest {
     client.sync();
     assertThat(new String(client.get("name"))).isEqualTo("Hassan");
     client.delete("name");
-    assertThat(client.get("name").length).isEqualTo(0);
+    assertThat(client.get("name")).isNull();
   }
 
   @Test

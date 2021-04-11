@@ -19,11 +19,9 @@ package org.dalvdb.backend;
 
 import com.google.protobuf.ByteString;
 import dalv.common.Common;
+import org.dalvdb.common.util.ByteUtil;
 import org.dalvdb.proto.BackendProto;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -56,23 +54,12 @@ public class DalvClient {
     BackendProto.GetResponse res = currentConnector.get(userId, key);
     if (res.getRepType() != Common.RepType.OK)
       return null;
-    byte[] bytes = res.getValue().toByteArray();
-    if (bytes == null || bytes.length == 0) return null;
-    List<byte[]> list = new ArrayList<>();
-    int currentIndex = 0;
-    while (currentIndex < bytes.length) {
-      int len = ByteBuffer.wrap(bytes, currentIndex, 4).getInt();
-      currentIndex += 4;
-      list.add(Arrays.copyOfRange(bytes, currentIndex, currentIndex + len));
-      currentIndex += len;
-    }
-    return list;
+    return ByteUtil.decodeList(res.getValue().toByteArray());
   }
 
   public byte[] get(String userId, String key) {
     List<byte[]> single = getAsList(userId, key);
-    if (single == null || single.isEmpty()) return null;
-    if (single.size() > 1) throw new IllegalStateException();
+    if (single == null || single.size() != 1) return null;
     return single.get(0);
   }
 
