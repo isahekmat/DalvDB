@@ -151,7 +151,7 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
 
   @Override
   public void watch(BackendProto.WatchRequest request, StreamObserver<BackendProto.WatchResponse> responseObserver) {
-    logger.debug("WATCH command received: keys:{}",request.getKeysList().listIterator());
-    watchManager.addWatch(request.getKeysList(), responseObserver);
+    logger.debug("WATCH command received on key:{}",request.getKey());
+    watchManager.addWatch(request.getKey(), responseObserver);
   }
 }

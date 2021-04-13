@@ -31,8 +31,10 @@ import java.util.concurrent.TimeUnit;
 public class BackendService implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(BackendService.class);
   private final Server server;
+  private final WatchManager watchManager;
 
   public BackendService(StorageService storageService, WatchManager watchManager) {
+    this.watchManager = watchManager;
     final int port = DalvConfig.getInt(DalvConfig.BACKEND_PORT);
     server = ServerBuilder.forPort(port)
         .addService(new BackendServiceImpl(storageService, watchManager)).build();
@@ -55,6 +57,7 @@ public class BackendService implements Closeable {
 
   @Override
   public void close() {
+    watchManager.close();
     if (server != null) {
       try {
         server.shutdown().awaitTermination(30, TimeUnit.SECONDS);

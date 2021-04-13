@@ -19,13 +19,19 @@ package org.dalvdb.backend;
 
 import com.google.protobuf.ByteString;
 import dalv.common.Common;
+import io.grpc.stub.StreamObserver;
+import org.dalvdb.backend.watch.WatchEvent;
+import org.dalvdb.backend.watch.Watcher;
 import org.dalvdb.common.util.ByteUtil;
 import org.dalvdb.proto.BackendProto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
 import java.util.List;
 
 public class DalvClient {
+  private static final Logger logger = LoggerFactory.getLogger(DalvClient.class);
   private final List<DalvConnector> connectors;
 
   private DalvConnector currentConnector;
@@ -40,6 +46,30 @@ public class DalvClient {
     this.connectors = connectors;
     this.currentConnectorIndex = 0;
     this.currentConnector = connectors.get(0);
+  }
+
+  public void watch(String key, Watcher watcher) {
+    currentConnector.watch(key, new StreamObserver<BackendProto.WatchResponse>() {
+      @Override
+      public void onNext(BackendProto.WatchResponse value) {
+        WatchEvent event = new WatchEvent()
+            .setUserId(value.getUserId())
+            .setNewValue(value.getOperation().getVal().toByteArray())
+            .setOperationType(value.getOperation().getType())
+            .setKey(key);
+        watcher.process(event);
+      }
+
+      @Override
+      public void onError(Throwable t) {
+        logger.error("error occurred while processing watch event over key {}", key, t);
+      }
+
+      @Override
+      public void onCompleted() {
+        logger.info("watch stream closed for key {}", key);
+      }
+    });
   }
 
   public boolean put(String userId, String key, byte[] value) {

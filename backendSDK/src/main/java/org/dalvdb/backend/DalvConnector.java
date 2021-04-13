@@ -20,11 +20,16 @@ package org.dalvdb.backend;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
+import org.dalvdb.backend.watch.Watcher;
 import org.dalvdb.proto.BackendProto;
 import org.dalvdb.proto.BackendServerGrpc;
 
+import java.util.Iterator;
+
 class DalvConnector {
   private final BackendServerGrpc.BackendServerBlockingStub client;
+  private final BackendServerGrpc.BackendServerStub clientFuture;
 
   public DalvConnector(String address) {
     String[] addressArr = address.split(":");
@@ -32,6 +37,7 @@ class DalvConnector {
     final int port = Integer.parseInt(addressArr[1]);
     ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
     client = BackendServerGrpc.newBlockingStub(channel);
+    clientFuture = BackendServerGrpc.newStub(channel);
   }
 
   public BackendProto.PutResponse put(String userId, String key, ByteString value) {
@@ -77,4 +83,9 @@ class DalvConnector {
     return client.removeFromList(request);
   }
 
+  public void watch(String key, StreamObserver<BackendProto.WatchResponse> responseObserver) {
+    BackendProto.WatchRequest request = BackendProto.WatchRequest.newBuilder()
+        .setKey(key).build();
+    clientFuture.watch(request,responseObserver);
+  }
 }

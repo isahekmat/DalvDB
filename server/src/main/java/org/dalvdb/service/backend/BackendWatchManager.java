@@ -37,11 +37,9 @@ public class BackendWatchManager implements WatchManager, Closeable {
   private final ExecutorService watcherExecutor = Executors.newFixedThreadPool(
       DalvConfig.getInt(DalvConfig.WATCHER_THREAD_NUM));
 
-  public synchronized void addWatch(List<String> keysList, StreamObserver<BackendProto.WatchResponse> responseObserver) {
-    keysList.forEach(key -> {
-      watches.putIfAbsent(key, new LinkedList<>());
-      watches.get(key).add(responseObserver);
-    });
+  public synchronized void addWatch(String key, StreamObserver<BackendProto.WatchResponse> responseObserver) {
+    watches.putIfAbsent(key, new LinkedList<>());
+    watches.get(key).add(responseObserver);
   }
 
   public void notifyChange(String userId, List<Common.Operation> operations) {
@@ -62,7 +60,7 @@ public class BackendWatchManager implements WatchManager, Closeable {
   }
 
   @Override
-  public synchronized void close() throws IOException {
+  public synchronized void close() {
     watches.values().forEach(streamObservers -> streamObservers.forEach(StreamObserver::onCompleted));
   }
 }
