@@ -20,23 +20,28 @@ package org.dalvdb.client;
 import dalv.common.Common;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
 import org.dalvdb.proto.ClientProto;
 import org.dalvdb.proto.ClientServerGrpc;
 
 import java.io.Closeable;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 class DalvConnector implements Closeable {
   private final String jwt;
   private final ClientServerGrpc.ClientServerBlockingStub client;
+  private final ClientServerGrpc.ClientServerStub clientNonBlocking;
+  private final ManagedChannel channel;
 
   public DalvConnector(String address, String jwt) {
     this.jwt = jwt;
     String[] addressArr = address.split(":");
     final String host = addressArr[0];
     final int port = Integer.parseInt(addressArr[1]);
-    ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
+    channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
     client = ClientServerGrpc.newBlockingStub(channel);
+    clientNonBlocking = ClientServerGrpc.newStub(channel);
   }
 
   public ClientProto.SyncResponse sync(List<Common.Operation> ops, int lastSnapshotId) {
@@ -48,8 +53,37 @@ class DalvConnector implements Closeable {
     return client.sync(request);
   }
 
-  @Override
-  public void close() {
+  public void watch(String key, StreamObserver<ClientProto.WatchResponse> observer) {
+    ClientProto.WatchRequest request = ClientProto.WatchRequest.newBuilder()
+        .setJwt(jwt)
+        .setKey(key)
+        .build();
+    clientNonBlocking.watch(request, observer);
   }
 
+  public ClientProto.WatchCancelResponse cancelWatch(String key) {
+    ClientProto.WatchCancelRequest request = ClientProto.WatchCancelRequest.newBuilder()
+        .setJwt(jwt)
+        .setKey(key)
+        .build();
+    return client.watchCancel(request);
+  }
+
+  public ClientProto.WatchCancelResponse cancelAllWatch() {
+    ClientProto.WatchCancelAllRequest request = ClientProto.WatchCancelAllRequest.newBuilder()
+        .setJwt(jwt)
+        .build();
+    return client.watchCancelAll(request);
+  }
+
+  @Override
+  public void close() {
+    channel.shutdown();
+    try {
+      channel.awaitTermination(1, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+      channel.shutdownNow();
+    }
+  }
 }

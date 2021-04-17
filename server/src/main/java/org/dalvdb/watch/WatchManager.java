@@ -15,19 +15,32 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dalvdb.service.backend;
+package org.dalvdb.watch;
 
 
 import dalv.common.Common;
 import io.grpc.stub.StreamObserver;
 import org.dalvdb.proto.BackendProto;
+import org.dalvdb.proto.ClientProto;
 
 import java.util.List;
 
 public interface WatchManager {
-  void addWatch(String key, StreamObserver<BackendProto.WatchResponse> responseObserver);
+  void addBackendWatch(String key, StreamObserver<BackendProto.WatchResponse> responseObserver);
+
+  void addClientWatch(String userId, String key, StreamObserver<ClientProto.WatchResponse> responseObserver);
 
   void notifyChange(String userId, List<Common.Operation> operations);
+
+  void notifyChange(String userId, Common.Operation operation);
+
+  void cancelAllClientWatch(String userId);
+
+  void cancelClientWatch(String userId, String key);
+
+  void cancelAllBackendWatch();
+
+  void cancelBackendWatch(String key);
 
   void close();
 }

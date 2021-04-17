@@ -14,6 +14,9 @@ message Operation {
   uint32 snapshotId = 4;
 }
 
+message Empty {
+}
+
 enum OpType {
   PUT = 0;
   DEL = 1;

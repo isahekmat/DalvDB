@@ -59,10 +59,10 @@ public final class DalvConfig {
     config.put(ZK_SESSION_TIMEOUT, 100);
     config.put(CLIENT_PORT, 7472);
     config.put(JWT_SIGN, "havijfarangichekhoobehavijfarangichekhoobehavijfarangichekhoobe");
-    config.put(LOCK_TIMEOUT, 200);
+    config.put(LOCK_TIMEOUT, 20);
     config.put(LOCK_SIZE_THRESHOLD, 200);
     config.put(BACKEND_PORT, 7470);
-    config.put(WATCHER_THREAD_NUM, 3);
+    config.put(WATCHER_THREAD_NUM, 8);
   }
 
   private DalvConfig() {

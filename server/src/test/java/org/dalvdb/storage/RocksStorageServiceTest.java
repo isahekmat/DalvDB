@@ -182,7 +182,7 @@ public class RocksStorageServiceTest {
     ByteString res = storageService.getValue("esa", "name");
     assertThat(ByteBuffer.wrap(res.toByteArray(),0,4).getInt()).isEqualTo(3);
     assertThat(res.substring(4).toString(Charset.defaultCharset())).isEqualTo("esa");
-    assertThat(storageService.getValue("esa", "lname")).isNull();
+    assertThat(storageService.getValue("esa", "lname").isEmpty()).isTrue();
     assertThat(ByteBuffer.wrap(storageService.getValue("esa", "age").toByteArray(),0,4)
         .getInt()).isEqualTo(4);
     assertThat(ByteBuffer.wrap(storageService.getValue("esa", "age").toByteArray(),4,4)

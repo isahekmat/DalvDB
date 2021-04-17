@@ -19,8 +19,8 @@ package org.dalvdb;
 
 
 import org.dalvdb.service.backend.BackendService;
-import org.dalvdb.service.backend.BackendWatchManager;
-import org.dalvdb.service.backend.WatchManager;
+import org.dalvdb.watch.InMemoryWatchManager;
+import org.dalvdb.watch.WatchManager;
 import org.dalvdb.service.client.ClientService;
 import org.dalvdb.storage.RocksStorageService;
 import org.dalvdb.storage.StorageService;
@@ -51,7 +51,7 @@ public class DalvServer implements Closeable {
     else
       this.cluster = null;
     //TODO should be changed to handle clients watches also
-    WatchManager watchManager = new BackendWatchManager();
+    WatchManager watchManager = new InMemoryWatchManager();
     this.clientService = new ClientService(this.storageService, watchManager);
     this.backendService = new BackendService(this.storageService, watchManager);
     logger.info("Dalv server started up");

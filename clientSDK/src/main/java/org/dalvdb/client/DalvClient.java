@@ -19,10 +19,15 @@ package org.dalvdb.client;
 
 import com.google.protobuf.ByteString;
 import dalv.common.Common;
+import io.grpc.stub.StreamObserver;
 import org.dalvdb.client.conflict.Conflict;
 import org.dalvdb.client.conflict.ConflictResolver;
 import org.dalvdb.common.util.ByteUtil;
+import org.dalvdb.common.watch.WatchEvent;
+import org.dalvdb.common.watch.Watcher;
 import org.dalvdb.proto.ClientProto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.util.HashMap;
@@ -31,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 
 public class DalvClient implements Closeable {
+  private static final Logger logger = LoggerFactory.getLogger(DalvClient.class);
   private final List<DalvConnector> connectors;
   private final Storage storage;
   private final Object syncLock = new Object();
@@ -101,6 +107,39 @@ public class DalvClient implements Closeable {
     }
   }
 
+  public boolean cancelWatch(String key) {
+    return currentConnector.cancelWatch(key).getResponse() == Common.RepType.OK;
+  }
+
+  public boolean cancelAllWatch() {
+    return currentConnector.cancelAllWatch().getResponse() == Common.RepType.OK;
+  }
+
+  public void watch(final String key, final Watcher watcher) {
+    StreamObserver<ClientProto.WatchResponse> so = new StreamObserver<ClientProto.WatchResponse>() {
+
+      @Override
+      public void onNext(ClientProto.WatchResponse value) {
+        WatchEvent event = new WatchEvent()
+            .setNewValue(value.getOperation().getVal().toByteArray())
+            .setOperationType(value.getOperation().getType())
+            .setKey(key);
+        watcher.process(event);
+      }
+
+      @Override
+      public void onError(Throwable t) {
+        logger.error("error occurred while processing watch event over key {}", key, t);
+      }
+
+      @Override
+      public void onCompleted() {
+        logger.info("watch stream closed for key {}", key);
+      }
+    };
+    currentConnector.watch(key, so);
+  }
+
   public List<byte[]> getAsList(String key) {
     byte[] bytes = storage.get(key);
     return ByteUtil.decodeList(bytes);
@@ -154,6 +193,10 @@ public class DalvClient implements Closeable {
 
   @Override
   public void close() {
+    cancelAllWatch();
     this.storage.close();
+    for (DalvConnector c : this.connectors) {
+      c.close();
+    }
   }
 }

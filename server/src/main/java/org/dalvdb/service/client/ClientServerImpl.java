@@ -26,8 +26,8 @@ import org.dalvdb.exception.InternalServerException;
 import org.dalvdb.lock.UserLockManager;
 import org.dalvdb.proto.ClientProto;
 import org.dalvdb.proto.ClientServerGrpc;
-import org.dalvdb.service.backend.WatchManager;
 import org.dalvdb.storage.StorageService;
+import org.dalvdb.watch.WatchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +46,39 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
     this.storage = storage;
     this.userLockManager = UserLockManager.getInstance();
     this.watchManager = watchManager;
+  }
+
+  @Override
+  public void watch(ClientProto.WatchRequest request, StreamObserver<ClientProto.WatchResponse> responseObserver) {
+    logger.debug("CLIENT WATCH command received on key:{}", request.getKey());
+    String jwt = request.getJwt();
+    String userId = validate(jwt);
+    watchManager.addClientWatch(userId, request.getKey(), responseObserver);
+    logger.debug("CLIENT WATCH command processed on key:{}", request.getKey());
+  }
+
+  @Override
+  public void watchCancel(ClientProto.WatchCancelRequest request,
+                          StreamObserver<ClientProto.WatchCancelResponse> responseObserver) {
+    logger.debug("CLIENT WATCH CANCEL command received on key:{}", request.getKey());
+    String jwt = request.getJwt();
+    String userId = validate(jwt);
+    watchManager.cancelClientWatch(userId,request.getKey());
+    responseObserver.onNext(ClientProto.WatchCancelResponse.newBuilder().setResponse(Common.RepType.OK).build());
+    responseObserver.onCompleted();
+    logger.debug("CLIENT WATCH CANCEL command processed on key:{}", request.getKey());
+  }
+
+  @Override
+  public void watchCancelAll(ClientProto.WatchCancelAllRequest request,
+                             StreamObserver<ClientProto.WatchCancelResponse> responseObserver) {
+    logger.debug("CLIENT WATCH CANCEL ALL command received");
+    String jwt = request.getJwt();
+    String userId = validate(jwt);
+    watchManager.cancelAllClientWatch(userId);
+    responseObserver.onNext(ClientProto.WatchCancelResponse.newBuilder().setResponse(Common.RepType.OK).build());
+    responseObserver.onCompleted();
+    logger.debug("CLIENT WATCH CANCEL ALL command processed");
   }
 
   @Override

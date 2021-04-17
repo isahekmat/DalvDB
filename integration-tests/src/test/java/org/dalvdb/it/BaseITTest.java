@@ -43,14 +43,16 @@ public abstract class BaseITTest {
     FileUtils.forceMkdir(new File("test-client-data"));
     client = new DalvClientBuilder().dataDir("test-client-data")
         .serverAddresses("localhost:7472")
+        //userId = "esa"
         .accessToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlc2EifQ.Gd3BoQIu3tAX2rxlKsgUMJkG38MbDZxoYmKOQfJ9N4g")
         .build();
   }
 
   @After
   public void tearDown() throws IOException {
-    server.close();
     client.close();
+    backend.close();
+    server.close();
     FileUtils.deleteDirectory(new File("test-data"));
     FileUtils.deleteDirectory(new File("test-client-data"));
   }

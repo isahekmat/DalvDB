@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dalvdb.backend.watch;
+package org.dalvdb.common.watch;
 
 public interface Watcher {
   void process(WatchEvent event);

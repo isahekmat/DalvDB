@@ -26,6 +26,7 @@ import org.dalvdb.lock.UserLockManager;
 import org.dalvdb.proto.BackendProto;
 import org.dalvdb.proto.BackendServerGrpc;
 import org.dalvdb.storage.StorageService;
+import org.dalvdb.watch.WatchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,16 +44,24 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
 
   @Override
   public void get(BackendProto.GetRequest request, StreamObserver<BackendProto.GetResponse> responseObserver) {
+    logger.debug("GET command received: userId:{} key:{}", request.getUserId(), request.getKey());
+    BackendProto.GetResponse response;
     try {
-      logger.debug("GET command received: userId:{} key:{}", request.getUserId(), request.getKey());
-      ByteString value = storageService.getValue(request.getUserId(), request.getKey());
-      BackendProto.GetResponse response = BackendProto.GetResponse.newBuilder()
-          .setRepType(value == null ? Common.RepType.NOK : Common.RepType.OK)
-          .setValue(value)
-          .build();
+      if (userLockManager.tryReadLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
+        try {
+          ByteString value = storageService.getValue(request.getUserId(), request.getKey());
+          response = BackendProto.GetResponse.newBuilder()
+              .setRepType(value == null ? Common.RepType.NOK : Common.RepType.OK)
+              .setValue(value)
+              .build();
+        } finally {
+          userLockManager.releaseReadLock(request.getUserId());
+        }
+      } else
+        response = BackendProto.GetResponse.newBuilder().setRepType(Common.RepType.NOK).build();
       responseObserver.onNext(response);
       responseObserver.onCompleted();
-    } catch (InternalServerException e) {
+    } catch (InternalServerException | InterruptedException e) {
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
     }
@@ -63,18 +72,27 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
     try {
       logger.debug("PUT command received: userId:{} key:{}", request.getUserId(), request.getKey());
       BackendProto.PutResponse response;
+      Common.Operation op = null;
       if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
-        storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
-            .setKey(request.getKey())
-            .setType(Common.OpType.PUT)
-            .setVal(request.getValue())
-            .build());
-        response = BackendProto.PutResponse.newBuilder().setRepType(Common.RepType.OK).build();
+        try {
+          op = Common.Operation.newBuilder()
+              .setKey(request.getKey())
+              .setType(Common.OpType.PUT)
+              .setVal(request.getValue())
+              .build();
+          storageService.addOperation(request.getUserId(), op);
+          response = BackendProto.PutResponse.newBuilder().setRepType(Common.RepType.OK).build();
+        } finally {
+          userLockManager.releaseWriteLock(request.getUserId());
+        }
       } else {
         response = BackendProto.PutResponse.newBuilder().setRepType(Common.RepType.NOK).build();
       }
       responseObserver.onNext(response);
       responseObserver.onCompleted();
+      logger.debug("PUT command processed: userId:{} key:{}", request.getUserId(), request.getKey());
+      if (response.getRepType() == Common.RepType.OK)
+        watchManager.notifyChange(request.getUserId(), op);
     } catch (InternalServerException | InterruptedException e) {
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
@@ -86,17 +104,25 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
     try {
       logger.debug("DEL command received: userId:{} key:{}", request.getUserId(), request.getKey());
       BackendProto.DelResponse response;
+      Common.Operation op = null;
       if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
-        storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
-            .setKey(request.getKey())
-            .setType(Common.OpType.DEL)
-            .build());
-        response = BackendProto.DelResponse.newBuilder().setRepType(Common.RepType.OK).build();
+        try {
+          op = Common.Operation.newBuilder()
+              .setKey(request.getKey())
+              .setType(Common.OpType.DEL)
+              .build();
+          storageService.addOperation(request.getUserId(), op);
+          response = BackendProto.DelResponse.newBuilder().setRepType(Common.RepType.OK).build();
+        } finally {
+          userLockManager.releaseWriteLock(request.getUserId());
+        }
       } else {
         response = BackendProto.DelResponse.newBuilder().setRepType(Common.RepType.NOK).build();
       }
       responseObserver.onNext(response);
       responseObserver.onCompleted();
+      if (response.getRepType() == Common.RepType.OK)
+        watchManager.notifyChange(request.getUserId(), op);
     } catch (InternalServerException | InterruptedException e) {
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
@@ -105,21 +131,29 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
 
   @Override
   public void addToList(BackendProto.AddToListRequest request, StreamObserver<BackendProto.AddToListResponse> responseObserver) {
+    logger.debug("ADD_TO_LIST command received: userId:{} listKey:{}", request.getUserId(), request.getListKey());
+    BackendProto.AddToListResponse response;
+    Common.Operation op = null;
     try {
-      logger.debug("ADD_TO_LIST command received: userId:{} listKey:{}",request.getUserId(),request.getListKey());
-      BackendProto.AddToListResponse response;
       if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
-        storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
-            .setKey(request.getListKey())
-            .setType(Common.OpType.ADD_TO_LIST)
-            .setVal(request.getValue())
-            .build());
-        response = BackendProto.AddToListResponse.newBuilder().setRepType(Common.RepType.OK).build();
+        try {
+          op = Common.Operation.newBuilder()
+              .setKey(request.getListKey())
+              .setType(Common.OpType.ADD_TO_LIST)
+              .setVal(request.getValue())
+              .build();
+          storageService.addOperation(request.getUserId(), op);
+          response = BackendProto.AddToListResponse.newBuilder().setRepType(Common.RepType.OK).build();
+        } finally {
+          userLockManager.releaseWriteLock(request.getUserId());
+        }
       } else {
         response = BackendProto.AddToListResponse.newBuilder().setRepType(Common.RepType.NOK).build();
       }
-      responseObserver.onNext(response);
-      responseObserver.onCompleted();
+    responseObserver.onNext(response);
+    responseObserver.onCompleted();
+    if (response.getRepType() == Common.RepType.OK)
+      watchManager.notifyChange(request.getUserId(), op);
     } catch (InternalServerException | InterruptedException e) {
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
@@ -129,20 +163,29 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
   @Override
   public void removeFromList(BackendProto.RemoveFromListRequest request, StreamObserver<BackendProto.RemoveFromListResponse> responseObserver) {
     try {
-      logger.debug("REMOVE_FROM_LIST command received: userId:{} listKey:{}",request.getUserId(),request.getListKey());
+      logger.debug("REMOVE_FROM_LIST command received: userId:{} listKey:{}", request.getUserId(), request.getListKey());
       BackendProto.RemoveFromListResponse response;
+      Common.Operation op = null;
       if (userLockManager.tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
-        storageService.addOperation(request.getUserId(), Common.Operation.newBuilder()
-            .setKey(request.getListKey())
-            .setType(Common.OpType.REMOVE_FROM_LIST)
-            .setVal(request.getValue())
-            .build());
-        response = BackendProto.RemoveFromListResponse.newBuilder().setRepType(Common.RepType.OK).build();
+        try {
+
+          op = Common.Operation.newBuilder()
+              .setKey(request.getListKey())
+              .setType(Common.OpType.REMOVE_FROM_LIST)
+              .setVal(request.getValue())
+              .build();
+          storageService.addOperation(request.getUserId(), op);
+          response = BackendProto.RemoveFromListResponse.newBuilder().setRepType(Common.RepType.OK).build();
+        } finally {
+          userLockManager.releaseWriteLock(request.getUserId());
+        }
       } else {
         response = BackendProto.RemoveFromListResponse.newBuilder().setRepType(Common.RepType.NOK).build();
       }
       responseObserver.onNext(response);
       responseObserver.onCompleted();
+      if (response.getRepType() == Common.RepType.OK)
+        watchManager.notifyChange(request.getUserId(), op);
     } catch (InternalServerException | InterruptedException e) {
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
@@ -151,7 +194,28 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
 
   @Override
   public void watch(BackendProto.WatchRequest request, StreamObserver<BackendProto.WatchResponse> responseObserver) {
-    logger.debug("WATCH command received on key:{}",request.getKey());
-    watchManager.addWatch(request.getKey(), responseObserver);
+    logger.debug("BACKEND WATCH command received on key:{}", request.getKey());
+    watchManager.addBackendWatch(request.getKey(), responseObserver);
+    logger.debug("BACKEND WATCH command processed on key:{}", request.getKey());
+  }
+
+  @Override
+  public void watchCancel(BackendProto.WatchCancelRequest request,
+                          StreamObserver<BackendProto.WatchCancelResponse> responseObserver) {
+    logger.debug("BACKEND WATCH CANCEL command received on key:{}", request.getKey());
+    watchManager.cancelBackendWatch(request.getKey());
+    responseObserver.onNext(BackendProto.WatchCancelResponse.newBuilder().setResponse(Common.RepType.OK).build());
+    responseObserver.onCompleted();
+    logger.debug("BACKEND WATCH CANCEL command processed on key:{}", request.getKey());
+  }
+
+  @Override
+  public void watchCancelAll(Common.Empty request,
+                             StreamObserver<BackendProto.WatchCancelResponse> responseObserver) {
+    logger.debug("BACKEND WATCH CANCEL ALL command received");
+    watchManager.cancelAllBackendWatch();
+    responseObserver.onNext(BackendProto.WatchCancelResponse.newBuilder().setResponse(Common.RepType.OK).build());
+    responseObserver.onCompleted();
+    logger.debug("BACKEND WATCH CANCEL ALL command processed");
   }
 }

@@ -18,24 +18,27 @@
 package org.dalvdb.backend;
 
 import com.google.protobuf.ByteString;
+import dalv.common.Common;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
-import org.dalvdb.backend.watch.Watcher;
 import org.dalvdb.proto.BackendProto;
 import org.dalvdb.proto.BackendServerGrpc;
 
-import java.util.Iterator;
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
-class DalvConnector {
+class DalvConnector implements Closeable {
   private final BackendServerGrpc.BackendServerBlockingStub client;
   private final BackendServerGrpc.BackendServerStub clientFuture;
+  private final ManagedChannel channel;
 
   public DalvConnector(String address) {
     String[] addressArr = address.split(":");
     final String host = addressArr[0];
     final int port = Integer.parseInt(addressArr[1]);
-    ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
+    channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
     client = BackendServerGrpc.newBlockingStub(channel);
     clientFuture = BackendServerGrpc.newStub(channel);
   }
@@ -86,6 +89,26 @@ class DalvConnector {
   public void watch(String key, StreamObserver<BackendProto.WatchResponse> responseObserver) {
     BackendProto.WatchRequest request = BackendProto.WatchRequest.newBuilder()
         .setKey(key).build();
-    clientFuture.watch(request,responseObserver);
+    clientFuture.watch(request, responseObserver);
   }
+
+  public BackendProto.WatchCancelResponse cancelAllWatch() {
+    return client.watchCancelAll(Common.Empty.newBuilder().build());
+  }
+
+  public BackendProto.WatchCancelResponse cancelWatch(String key){
+    return client.watchCancel(BackendProto.WatchCancelRequest.newBuilder().setKey(key).build());
+  }
+
+  @Override
+  public void close() throws IOException {
+    channel.shutdown();
+    try {
+      channel.awaitTermination(10, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+      channel.shutdownNow();
+    }
+  }
+
 }

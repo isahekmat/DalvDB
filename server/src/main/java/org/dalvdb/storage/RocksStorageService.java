@@ -165,7 +165,7 @@ public class RocksStorageService implements StorageService {
   }
 
   private ByteString constructValue(Set<ByteString> vals, int len) {
-    if (vals.isEmpty()) return null;
+    if (vals.isEmpty()) return ByteString.EMPTY;
     //bufferSize = (total values len) + (4 byte for each value len)
     ByteBuffer buffer = ByteBuffer.allocate(len + 4*(vals.size()));
     for (ByteString val : vals) {

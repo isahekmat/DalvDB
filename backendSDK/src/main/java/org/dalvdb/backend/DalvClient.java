@@ -20,17 +20,19 @@ package org.dalvdb.backend;
 import com.google.protobuf.ByteString;
 import dalv.common.Common;
 import io.grpc.stub.StreamObserver;
-import org.dalvdb.backend.watch.WatchEvent;
-import org.dalvdb.backend.watch.Watcher;
 import org.dalvdb.common.util.ByteUtil;
+import org.dalvdb.common.watch.WatchEvent;
+import org.dalvdb.common.watch.Watcher;
 import org.dalvdb.proto.BackendProto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
-public class DalvClient {
+public class DalvClient implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(DalvClient.class);
   private final List<DalvConnector> connectors;
 
@@ -46,6 +48,14 @@ public class DalvClient {
     this.connectors = connectors;
     this.currentConnectorIndex = 0;
     this.currentConnector = connectors.get(0);
+  }
+
+  public boolean cancelWatch(String key) {
+    return currentConnector.cancelWatch(key).getResponse() == Common.RepType.OK;
+  }
+
+  public boolean cancelAllWatch() {
+    return currentConnector.cancelAllWatch().getResponse() == Common.RepType.OK;
   }
 
   public void watch(String key, Watcher watcher) {
@@ -99,5 +109,13 @@ public class DalvClient {
 
   public boolean removeFromList(String userId, String listKey, byte[] value) {
     return currentConnector.removeFromList(userId, listKey, ByteString.copyFrom(value)).getRepType() == Common.RepType.OK;
+  }
+
+  @Override
+  public void close() throws IOException {
+    cancelAllWatch();
+    for (DalvConnector connector : this.connectors) {
+      connector.close();
+    }
   }
 }

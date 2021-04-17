@@ -14,6 +14,8 @@ service BackendServer {
   rpc addToList(AddToListRequest) returns (AddToListResponse){}
   rpc removeFromList(RemoveFromListRequest) returns (RemoveFromListResponse){}
   rpc watch(WatchRequest) returns (stream WatchResponse){}
+  rpc watchCancel(WatchCancelRequest) returns (WatchCancelResponse){}
+  rpc watchCancelAll(common.Empty) returns (WatchCancelResponse){}
 }
 
 message GetRequest {
@@ -72,4 +74,12 @@ message WatchRequest{
 message WatchResponse{
   string userId = 1;
   dalv.common.Operation operation = 2;
+}
+
+message WatchCancelRequest {
+  string key = 1;
+}
+
+message WatchCancelResponse {
+  common.RepType response = 1;
 }
