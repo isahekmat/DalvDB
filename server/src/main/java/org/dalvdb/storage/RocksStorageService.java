@@ -22,6 +22,7 @@ import dalv.common.Common;
 import org.dalvdb.DalvConfig;
 import org.dalvdb.common.util.ByteUtil;
 import org.dalvdb.exception.InternalServerException;
+import org.dalvdb.lock.UserLockManager;
 import org.rocksdb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ public class RocksStorageService implements StorageService {
   private static final Logger logger = LoggerFactory.getLogger(RocksStorageService.class);
   private final RocksDB rocksDB;
   private final WriteOptions wo;
+  private final Map<String, Queue<Common.Operation>> mirroredUser = new HashMap<>();
 
   public RocksStorageService() {
     String dataDir = DalvConfig.getStr(DalvConfig.DATA_DIR);
@@ -67,10 +69,12 @@ public class RocksStorageService implements StorageService {
     if (checkForConflict(get(userId, lastSnapshotId), opsList))
       return false;
     try {
+      Queue<Common.Operation> mirrorQueue = mirroredUser.get(userId);
       byte[] key = userId.getBytes(Charset.defaultCharset());
       WriteBatch wb = new WriteBatch();
       for (Common.Operation operation : opsList) {
         wb.merge(key, ByteUtil.opToByte(operation));
+        if (mirrorQueue != null) mirrorQueue.offer(operation);
       }
 
       rocksDB.write(wo, wb);
@@ -88,6 +92,10 @@ public class RocksStorageService implements StorageService {
     try {
       byte[] key = userId.getBytes(Charset.defaultCharset());
       rocksDB.merge(key, ByteUtil.opToByte(operation));
+
+      Queue<Common.Operation> mirrorQueue = mirroredUser.get(userId);
+      if (mirrorQueue != null) mirrorQueue.offer(operation);
+
     } catch (RocksDBException e) {
       throw new InternalServerException(e);
     }
@@ -167,7 +175,7 @@ public class RocksStorageService implements StorageService {
   private ByteString constructValue(Set<ByteString> vals, int len) {
     if (vals.isEmpty()) return ByteString.EMPTY;
     //bufferSize = (total values len) + (4 byte for each value len)
-    ByteBuffer buffer = ByteBuffer.allocate(len + 4*(vals.size()));
+    ByteBuffer buffer = ByteBuffer.allocate(len + 4 * (vals.size()));
     for (ByteString val : vals) {
       buffer.putInt(val.size());
       buffer.put(val.toByteArray());
@@ -216,6 +224,84 @@ public class RocksStorageService implements StorageService {
       rocksDB.delete((userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()));
     } catch (RocksDBException e) {
       throw new InternalServerException(e);
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void compact(String userId) {
+    byte[] userKey = userId.getBytes(Charset.defaultCharset());
+    ByteUtil.OperatorsReverseIterator iterator;
+    try {
+      //it's a write lock because we start mirroring and we don't want any other write interfere this
+      if (UserLockManager.getInstance().tryWriteLock(userId, 10)) {
+        try {
+          iterator = new ByteUtil.OperatorsReverseIterator(rocksDB.get(userKey));
+          //start mirroring
+          mirroredUser.put(userId, new LinkedList<>());
+        } catch (RocksDBException e) {
+          throw new InternalServerException(e);
+        } finally {
+          UserLockManager.getInstance().releaseWriteLock(userId);
+        }
+      } else return;
+    } catch (InterruptedException e) {
+      logger.error(e.getMessage(), e);
+      return;
+    }
+
+    List<Common.Operation> result = compactOperations(iterator);
+    mergeBack(userId, result);
+  }
+
+  private List<Common.Operation> compactOperations(ByteUtil.OperatorsReverseIterator iterator) {
+    Set<String> ignoreKeys = new HashSet<>();
+    Map<String, List<ByteString>> ignoreItemInList = new HashMap<>();
+    LinkedList<Common.Operation> result = new LinkedList<>();
+    while (iterator.hasNext()) {
+      Common.Operation op = iterator.next();
+      if (ignoreKeys.contains(op.getKey())) continue;
+      if ((op.getType() == Common.OpType.ADD_TO_LIST || op.getType() == Common.OpType.PUT) &&
+          ignoreItemInList.containsKey(op.getKey()) &&
+          ignoreItemInList.get(op.getKey()).contains(op.getVal()))
+        continue;
+      if (op.getType() != Common.OpType.DEL && op.getType() != Common.OpType.REMOVE_FROM_LIST)
+        result.addFirst(op);
+      if (op.getType() == Common.OpType.PUT || op.getType() == Common.OpType.DEL)
+        ignoreKeys.add(op.getKey());
+      else if (op.getType() == Common.OpType.REMOVE_FROM_LIST) {
+        ignoreItemInList.putIfAbsent(op.getKey(), new LinkedList<>());
+        ignoreItemInList.get(op.getKey()).add(op.getVal());
+      }
+    }
+    return result;
+  }
+
+  private void mergeBack(String userId, List<Common.Operation> result) {
+    byte[] userKey = userId.getBytes(Charset.defaultCharset());
+    try {
+      if (UserLockManager.getInstance().tryWriteLock(userId, 10)) {
+        try {
+          result.addAll(mirroredUser.get(userId)); //TODO watch the order
+          WriteBatch wb = new WriteBatch();
+          wb.delete(userKey);
+          for (Common.Operation operation : result) {
+            wb.merge(userKey, ByteUtil.opToByte(operation));
+          }
+          rocksDB.write(wo, wb);
+        } catch (RocksDBException e) {
+          throw new InternalServerException(e);
+        } finally {
+          UserLockManager.getInstance().releaseWriteLock(userId);
+        }
+      }
+    } catch (InterruptedException e) {
+      logger.error(e.getMessage(), e);
+    } finally {
+      //stop mirroring
+      mirroredUser.remove(userId);
     }
   }
 

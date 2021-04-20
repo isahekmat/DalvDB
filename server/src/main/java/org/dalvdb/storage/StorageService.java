@@ -81,4 +81,11 @@ public interface StorageService extends Closeable {
    * @param userId the user identification
    */
   void delete(String userId);
+
+  /**
+   * Run compaction process on a specific user
+   *
+   * @param userId the user which the storage want to compact it's data
+   */
+  void compact(String userId);
 }

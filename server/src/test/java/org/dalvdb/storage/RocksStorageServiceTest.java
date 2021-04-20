@@ -180,13 +180,135 @@ public class RocksStorageServiceTest {
         .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(30).array()))
         .build());
     ByteString res = storageService.getValue("esa", "name");
-    assertThat(ByteBuffer.wrap(res.toByteArray(),0,4).getInt()).isEqualTo(3);
+    assertThat(ByteBuffer.wrap(res.toByteArray(), 0, 4).getInt()).isEqualTo(3);
     assertThat(res.substring(4).toString(Charset.defaultCharset())).isEqualTo("esa");
     assertThat(storageService.getValue("esa", "lname").isEmpty()).isTrue();
-    assertThat(ByteBuffer.wrap(storageService.getValue("esa", "age").toByteArray(),0,4)
+    assertThat(ByteBuffer.wrap(storageService.getValue("esa", "age").toByteArray(), 0, 4)
         .getInt()).isEqualTo(4);
-    assertThat(ByteBuffer.wrap(storageService.getValue("esa", "age").toByteArray(),4,4)
+    assertThat(ByteBuffer.wrap(storageService.getValue("esa", "age").toByteArray(), 4, 4)
         .getInt()).isEqualTo(30);
     storageService.delete("esa");
   }
+
+  @Test
+  public void compactSeveralPutTest() {
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa1".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa2".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa3".getBytes()))
+        .build());
+    storageService.compact("esa");
+    List<Common.Operation> ops = storageService.get("esa", 0);
+    assertThat(ops.size()).isEqualTo(1);
+    assertThat(ops.get(0).getVal()).isEqualTo(ByteString.copyFrom("esa3".getBytes()));
+    storageService.delete("esa");
+  }
+
+  @Test
+  public void compactSeveralPutAndDelTest() {
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa1".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa2".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.DEL)
+        .setKey("names")
+        .build());
+    storageService.compact("esa");
+    List<Common.Operation> ops = storageService.get("esa", 0);
+    assertThat(ops.size()).isEqualTo(0);
+    storageService.delete("esa");
+
+  }
+
+  @Test
+  public void compactListTest() {
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa1".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.ADD_TO_LIST)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa2".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.REMOVE_FROM_LIST)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa2".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.REMOVE_FROM_LIST)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("non-exist".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.ADD_TO_LIST)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa3".getBytes()))
+        .build());
+    storageService.compact("esa");
+    List<Common.Operation> ops = storageService.get("esa", 0);
+    assertThat(ops.size()).isEqualTo(2);
+    assertThat(ops.get(0).getType()).isEqualTo(Common.OpType.PUT);
+    assertThat(ops.get(0).getVal()).isEqualTo(ByteString.copyFrom("esa1".getBytes()));
+    assertThat(ops.get(1).getType()).isEqualTo(Common.OpType.ADD_TO_LIST);
+    assertThat(ops.get(1).getVal()).isEqualTo(ByteString.copyFrom("esa3".getBytes()));
+    storageService.delete("esa");
+  }
+
+  @Test
+  public void compactListWithRemoveFirstTest() {
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa1".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.ADD_TO_LIST)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa2".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.REMOVE_FROM_LIST)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa1".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.REMOVE_FROM_LIST)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("non-exist".getBytes()))
+        .build());
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.ADD_TO_LIST)
+        .setKey("names")
+        .setVal(ByteString.copyFrom("esa3".getBytes()))
+        .build());
+    storageService.compact("esa");
+    List<Common.Operation> ops = storageService.get("esa", 0);
+    assertThat(ops.size()).isEqualTo(2);
+    assertThat(ops.get(0).getType()).isEqualTo(Common.OpType.ADD_TO_LIST);
+    assertThat(ops.get(0).getVal()).isEqualTo(ByteString.copyFrom("esa2".getBytes()));
+    assertThat(ops.get(1).getType()).isEqualTo(Common.OpType.ADD_TO_LIST);
+    assertThat(ops.get(1).getVal()).isEqualTo(ByteString.copyFrom("esa3".getBytes()));
+    storageService.delete("esa");
+  }
+
 }
