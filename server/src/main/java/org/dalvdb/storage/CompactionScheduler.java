@@ -56,6 +56,7 @@ class CompactionScheduler implements Closeable {
       queue.add(new String(rocksIterator.key()));
       rocksIterator.next();
     }
+    rocksIterator.close();
   }
 
   private void compaction() {
