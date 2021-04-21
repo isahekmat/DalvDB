@@ -41,16 +41,31 @@ public class RocksStorageService implements StorageService {
   private final RocksDB rocksDB;
   private final WriteOptions wo;
   private final Map<String, Queue<Common.Operation>> mirroredUser = new HashMap<>();
+  private final ColumnFamilyHandle metaData;
+  private final CompactionScheduler compactionScheduler;
 
   public RocksStorageService() {
     String dataDir = DalvConfig.getStr(DalvConfig.DATA_DIR);
     RocksDB db = null;
     WriteOptions writeOptions = null;
+    ColumnFamilyHandle metadataHandler = null;
     try {
       Options options = new Options();
       options.setCreateIfMissing(true);
+      options.setCreateMissingColumnFamilies(true);
       options.setMergeOperator(new StringAppendOperator((char) (0)));
-      db = RocksDB.open(options, dataDir);
+      List<byte[]> cfs = RocksDB.listColumnFamilies(options, dataDir);
+      if (cfs.size() == 2) { //meta and default column families exist
+        List<ColumnFamilyHandle> hs = new LinkedList<>();
+        List<ColumnFamilyDescriptor> cfdList = new LinkedList<>();
+        cfdList.add(new ColumnFamilyDescriptor("default".getBytes(), new ColumnFamilyOptions(options)));
+        cfdList.add(new ColumnFamilyDescriptor("meta".getBytes(), new ColumnFamilyOptions(options)));
+        db = RocksDB.open(dataDir, cfdList, hs);
+        metadataHandler = hs.get(0);
+      } else {
+        db = RocksDB.open(options, dataDir);
+        metadataHandler = db.createColumnFamily(new ColumnFamilyDescriptor("meta".getBytes()));
+      }
       writeOptions = new WriteOptions();
       writeOptions.setSync(true);
     } catch (RocksDBException e) {
@@ -59,6 +74,9 @@ public class RocksStorageService implements StorageService {
     }
     this.rocksDB = db;
     this.wo = writeOptions;
+    this.metaData = metadataHandler;
+    this.compactionScheduler = new CompactionScheduler(this);
+    this.compactionScheduler.startScheduler();
   }
 
   /**
@@ -78,6 +96,7 @@ public class RocksStorageService implements StorageService {
       }
 
       rocksDB.write(wo, wb);
+      compactionScheduler.updateReceived(userId);
       return true;
     } catch (RocksDBException e) {
       throw new InternalServerException(e);
@@ -96,6 +115,7 @@ public class RocksStorageService implements StorageService {
       Queue<Common.Operation> mirrorQueue = mirroredUser.get(userId);
       if (mirrorQueue != null) mirrorQueue.offer(operation);
 
+      compactionScheduler.updateReceived(userId);
     } catch (RocksDBException e) {
       throw new InternalServerException(e);
     }
@@ -194,7 +214,7 @@ public class RocksStorageService implements StorageService {
           .setSnapshotId(snapshotId).build();
       WriteBatch wb = new WriteBatch(8 + op.toByteArray().length);
       wb.merge(userId.getBytes(Charset.defaultCharset()), ByteUtil.opToByte(op));
-      wb.put((userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()),
+      wb.put(metaData, (userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()),
           ByteBuffer.allocate(4).putInt(snapshotId).array());
       rocksDB.write(wo, wb);
       return snapshotId;
@@ -205,7 +225,7 @@ public class RocksStorageService implements StorageService {
 
   private int lastSnapshotId(String userId) {
     try {
-      byte[] lastSnapShotId = rocksDB.get((userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()));
+      byte[] lastSnapShotId = rocksDB.get(metaData, (userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()));
       if (lastSnapShotId == null)
         return 0;
       return ByteBuffer.wrap(lastSnapShotId).getInt();
@@ -221,7 +241,7 @@ public class RocksStorageService implements StorageService {
   public void delete(String userId) {
     try {
       rocksDB.delete(userId.getBytes(Charset.defaultCharset()));
-      rocksDB.delete((userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()));
+      rocksDB.delete(metaData, (userId + ".lastSnapshotId").getBytes(Charset.defaultCharset()));
     } catch (RocksDBException e) {
       throw new InternalServerException(e);
     }
@@ -305,11 +325,17 @@ public class RocksStorageService implements StorageService {
     }
   }
 
+  RocksIterator keyIterator() {
+    return rocksDB.newIterator();
+  }
+
   /**
    * Close the underling rocks db instance and its writeOptions
    */
   @Override
   public void close() {
+    compactionScheduler.close();
+    metaData.close();
     wo.close();
     rocksDB.close();
   }

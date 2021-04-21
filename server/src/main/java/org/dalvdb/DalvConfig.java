@@ -44,6 +44,8 @@ public final class DalvConfig {
   public static final String LOCK_SIZE_THRESHOLD = "lock.size.threshold";
   public static final String BACKEND_PORT = "backend.port";
   public static final String WATCHER_THREAD_NUM = "watcher.thread.num";
+  public static final String COMPACTION_DELAY = "compaction.delay";
+  public static final String COMPACTION_INTERVAL = "compaction.interval";
 
   //Environment Variable
   private static final String DALV_CONFIG = "DALV_CONFIG";
@@ -63,6 +65,8 @@ public final class DalvConfig {
     config.put(LOCK_SIZE_THRESHOLD, 200);
     config.put(BACKEND_PORT, 7470);
     config.put(WATCHER_THREAD_NUM, 8);
+    config.put(COMPACTION_DELAY, 10L);
+    config.put(COMPACTION_INTERVAL, 10L);
   }
 
   private DalvConfig() {
@@ -145,6 +149,16 @@ public final class DalvConfig {
    */
   public static Boolean getBoolean(String key) {
     return (Boolean) config.get(key);
+  }
+
+  /**
+   * Get a configuration which its value is a Long
+   *
+   * @param key the configuration key
+   * @return the configuration value
+   */
+  public static Long getLong(String key) {
+    return (Long) config.get(key);
   }
 
   /**
