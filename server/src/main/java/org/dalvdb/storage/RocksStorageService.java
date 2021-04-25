@@ -125,7 +125,7 @@ public class RocksStorageService implements StorageService {
   private boolean checkForConflict(List<Common.Operation> oldOps,
                                    List<Common.Operation> newOps) {
     if (oldOps.isEmpty()) return false;
-    if(oldOps.get(0).equals(OpUtil.REMOVE_ALL_OP)) return true;
+    if (oldOps.get(0).equals(OpUtil.REMOVE_ALL_OP)) return true;
     Set<String> modifiedKeys = oldOps.stream().map(Common.Operation::getKey).collect(Collectors.toSet());
     return newOps.stream().filter(op -> op.getType() != Common.OpType.SNAPSHOT)
         .map(Common.Operation::getKey).anyMatch(modifiedKeys::contains);
@@ -294,11 +294,12 @@ public class RocksStorageService implements StorageService {
     boolean first = true;
     while (iterator.hasNext()) {
       Common.Operation op = iterator.next();
-      if (first) {
-        if (op.getType() == Common.OpType.SNAPSHOT) {
+      if (op.getType() == Common.OpType.SNAPSHOT) {
+        if (first) {
           result.addFirst(op);
         }
         first = false;
+        continue;
       }
       if (ignoreKeys.contains(op.getKey())) continue;
       if ((op.getType() == Common.OpType.ADD_TO_LIST || op.getType() == Common.OpType.PUT) &&

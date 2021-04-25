@@ -20,6 +20,7 @@ package org.dalvdb.storage;
 import com.google.protobuf.ByteString;
 import dalv.common.Common;
 import org.dalvdb.DalvConfig;
+import org.dalvdb.common.util.OpUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -316,4 +317,26 @@ public class RocksStorageServiceTest {
     assertThat(ops.get(2).getSnapshotId()).isEqualTo(1);
   }
 
+
+  @Test
+  public void severalSnapshotInTheCompaction(){
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey("theme")
+        .setVal(ByteString.copyFrom("blue".getBytes()))
+        .build());
+    storageService.snapshot("esa");
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.DEL)
+        .setKey("theme")
+        .build());
+    storageService.snapshot("esa");
+    storageService.compact("esa");
+    List<Common.Operation> ops = storageService.get("esa", 1);
+    assertThat(ops.size()).isEqualTo(2);
+    assertThat(ops.get(0).getType()).isEqualTo(OpUtil.REMOVE_ALL_OP.getType());
+    assertThat(ops.get(0).getKey()).isEqualTo(OpUtil.REMOVE_ALL_OP.getKey());
+    assertThat(ops.get(1).getType()).isEqualTo(Common.OpType.SNAPSHOT);
+    assertThat(ops.get(1).getSnapshotId()).isEqualTo(2);
+  }
 }
