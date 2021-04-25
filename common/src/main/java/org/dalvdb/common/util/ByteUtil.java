@@ -72,39 +72,7 @@ public class ByteUtil {
   }
 
   public static Iterator<Common.Operation> getReverseIterator(byte[] recordsBytes) {
-    return new OperatorsReverseIterator(recordsBytes);
+    return new OpUtil.OperatorsReverseIterator(recordsBytes);
   }
 
-  public static class OperatorsReverseIterator implements Iterator<Common.Operation> {
-    private final byte[] recordsBytes;
-    private int currentIndex;
-
-    public OperatorsReverseIterator(byte[] recordsBytes) {
-      this.recordsBytes = recordsBytes;
-      this.currentIndex = recordsBytes == null ? 0 : recordsBytes.length;
-    }
-
-    @Override
-    public boolean hasNext() {
-      return currentIndex > 0;
-    }
-
-    @Override
-    public Common.Operation next() {
-      int len = ByteBuffer.wrap(recordsBytes, currentIndex - 4, 4).getInt();
-      try {
-        Common.Operation op =
-            Common.Operation.parseFrom(ByteString.copyFrom(recordsBytes, currentIndex - (4 + len), len));
-        currentIndex -= len + 5;
-        return op;
-      } catch (InvalidProtocolBufferException e) {
-        throw new IllegalStateException(e);
-      }
-    }
-
-    @Override
-    public void remove() {
-      throw new IllegalStateException("Operation not supported");
-    }
-  }
 }

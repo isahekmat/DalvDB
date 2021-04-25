@@ -50,7 +50,10 @@ public interface StorageService extends Closeable {
   void addOperation(String userId, Common.Operation operation);
 
   /**
-   * get the list of operations for a user after the lastSnapshotId
+   * Get the list of operations for a user after the lastSnapshotId
+   *
+   * if the lastSnapshotId does not exist and greater than 0
+   * then add a remove all operation in the beginning of the result
    *
    * @param userId         the user identification
    * @param lastSnapshotId return operations after this snapshot

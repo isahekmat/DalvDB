@@ -20,6 +20,7 @@ package org.dalvdb.storage;
 import com.google.protobuf.ByteString;
 import dalv.common.Common;
 import org.dalvdb.DalvConfig;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -43,6 +44,11 @@ public class RocksStorageServiceTest {
   public static void setUp() {
     DalvConfig.set(DalvConfig.DATA_DIR, UUID.randomUUID().toString());
     storageService = new RocksStorageService();
+  }
+
+  @After
+  public void after(){
+      storageService.delete("esa");
   }
 
   @AfterClass
@@ -78,7 +84,6 @@ public class RocksStorageServiceTest {
     assertThat(ops.get(0)).isEqualTo(op1);
     assertThat(ops.get(1)).isEqualTo(op2);
     assertThat(ops.get(2)).isEqualTo(op3);
-    storageService.delete("esa");
   }
 
 
@@ -87,22 +92,22 @@ public class RocksStorageServiceTest {
     Common.Operation op1 = Common.Operation.newBuilder()
         .setType(Common.OpType.PUT)
         .setKey("name")
-        .setVal(ByteString.copyFrom("ali".getBytes()))
+        .setVal(ByteString.copyFrom("esa".getBytes()))
         .build();
     Common.Operation op2 = Common.Operation.newBuilder()
         .setType(Common.OpType.PUT)
         .setKey("fname")
-        .setVal(ByteString.copyFrom("karimin".getBytes()))
+        .setVal(ByteString.copyFrom("hekmat".getBytes()))
         .build();
     Common.Operation op3 = Common.Operation.newBuilder()
         .setType(Common.OpType.PUT)
         .setKey("age")
         .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(32).array()))
         .build();
-    storageService.handleOperations("ali", List.of(op1, op2, op3), 0);
-    int snapshotId = storageService.snapshot("ali");
+    storageService.handleOperations("esa", List.of(op1, op2, op3), 0);
+    int snapshotId = storageService.snapshot("esa");
     assertThat(snapshotId).isEqualTo(1);
-    List<Common.Operation> ops = storageService.get("ali", snapshotId);
+    List<Common.Operation> ops = storageService.get("esa", snapshotId);
     assertThat(ops).isEmpty();
 
     Common.Operation op4 = Common.Operation.newBuilder()
@@ -110,14 +115,13 @@ public class RocksStorageServiceTest {
         .setKey("age")
         .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(40).array()))
         .build();
-    storageService.handleOperations("ali", Collections.singletonList(op4), snapshotId);
-    int snapshotId2 = storageService.snapshot("ali");
+    storageService.handleOperations("esa", Collections.singletonList(op4), snapshotId);
+    int snapshotId2 = storageService.snapshot("esa");
     assertThat(snapshotId2).isEqualTo(2);
-    List<Common.Operation> ops2 = storageService.get("ali", snapshotId);
+    List<Common.Operation> ops2 = storageService.get("esa", snapshotId);
     assertThat(ops2.size()).isEqualTo(2);
     assertThat(ops2.get(0)).isEqualTo(op4);
     assertThat(ops2.get(1).getType()).isEqualTo(Common.OpType.SNAPSHOT);
-    storageService.delete("ali");
   }
 
   @Test
@@ -125,19 +129,19 @@ public class RocksStorageServiceTest {
     Common.Operation op1 = Common.Operation.newBuilder()
         .setType(Common.OpType.PUT)
         .setKey("name")
-        .setVal(ByteString.copyFrom("ali".getBytes()))
+        .setVal(ByteString.copyFrom("esa".getBytes()))
         .build();
     Common.Operation op2 = Common.Operation.newBuilder()
         .setType(Common.OpType.PUT)
         .setKey("last_name")
-        .setVal(ByteString.copyFrom("karimin".getBytes()))
+        .setVal(ByteString.copyFrom("hekmat".getBytes()))
         .build();
     Common.Operation op3 = Common.Operation.newBuilder()
         .setType(Common.OpType.PUT)
         .setKey("age")
         .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(32).array()))
         .build();
-    boolean firstWrite = storageService.handleOperations("ali", List.of(op1, op2, op3), 0);
+    boolean firstWrite = storageService.handleOperations("esa", List.of(op1, op2, op3), 0);
     assertThat(firstWrite).isTrue();
 
     Common.Operation op4 = Common.Operation.newBuilder()
@@ -146,12 +150,11 @@ public class RocksStorageServiceTest {
         .setVal(ByteString.copyFrom(ByteBuffer.allocate(4).putInt(40).array()))
         .build();
 
-    boolean secondWrite = storageService.handleOperations("ali", Collections.singletonList(op4), 0);
+    boolean secondWrite = storageService.handleOperations("esa", Collections.singletonList(op4), 0);
     assertThat(secondWrite).isFalse();
-    List<Common.Operation> ops2 = storageService.get("ali", 0);
+    List<Common.Operation> ops2 = storageService.get("esa", 0);
     assertThat(ops2.size()).isEqualTo(3);
     assertThat(ops2.get(2)).isEqualTo(op3);
-    storageService.delete("ali");
   }
 
   @Test
@@ -187,7 +190,6 @@ public class RocksStorageServiceTest {
         .getInt()).isEqualTo(4);
     assertThat(ByteBuffer.wrap(storageService.getValue("esa", "age").toByteArray(), 4, 4)
         .getInt()).isEqualTo(30);
-    storageService.delete("esa");
   }
 
   @Test
@@ -209,9 +211,10 @@ public class RocksStorageServiceTest {
         .build());
     storageService.compact("esa");
     List<Common.Operation> ops = storageService.get("esa", 0);
-    assertThat(ops.size()).isEqualTo(1);
+    assertThat(ops.size()).isEqualTo(2);
     assertThat(ops.get(0).getVal()).isEqualTo(ByteString.copyFrom("esa3".getBytes()));
-    storageService.delete("esa");
+    assertThat(ops.get(1).getType()).isEqualTo(Common.OpType.SNAPSHOT);
+    assertThat(ops.get(1).getSnapshotId()).isEqualTo(1);
   }
 
   @Test
@@ -232,9 +235,9 @@ public class RocksStorageServiceTest {
         .build());
     storageService.compact("esa");
     List<Common.Operation> ops = storageService.get("esa", 0);
-    assertThat(ops.size()).isEqualTo(0);
-    storageService.delete("esa");
-
+    assertThat(ops.size()).isEqualTo(1);
+    assertThat(ops.get(0).getType()).isEqualTo(Common.OpType.SNAPSHOT);
+    assertThat(ops.get(0).getSnapshotId()).isEqualTo(1);
   }
 
   @Test
@@ -266,12 +269,13 @@ public class RocksStorageServiceTest {
         .build());
     storageService.compact("esa");
     List<Common.Operation> ops = storageService.get("esa", 0);
-    assertThat(ops.size()).isEqualTo(2);
+    assertThat(ops.size()).isEqualTo(3);
     assertThat(ops.get(0).getType()).isEqualTo(Common.OpType.PUT);
     assertThat(ops.get(0).getVal()).isEqualTo(ByteString.copyFrom("esa1".getBytes()));
     assertThat(ops.get(1).getType()).isEqualTo(Common.OpType.ADD_TO_LIST);
     assertThat(ops.get(1).getVal()).isEqualTo(ByteString.copyFrom("esa3".getBytes()));
-    storageService.delete("esa");
+    assertThat(ops.get(2).getType()).isEqualTo(Common.OpType.SNAPSHOT);
+    assertThat(ops.get(2).getSnapshotId()).isEqualTo(1);
   }
 
   @Test
@@ -303,12 +307,13 @@ public class RocksStorageServiceTest {
         .build());
     storageService.compact("esa");
     List<Common.Operation> ops = storageService.get("esa", 0);
-    assertThat(ops.size()).isEqualTo(2);
+    assertThat(ops.size()).isEqualTo(3);
     assertThat(ops.get(0).getType()).isEqualTo(Common.OpType.ADD_TO_LIST);
     assertThat(ops.get(0).getVal()).isEqualTo(ByteString.copyFrom("esa2".getBytes()));
     assertThat(ops.get(1).getType()).isEqualTo(Common.OpType.ADD_TO_LIST);
     assertThat(ops.get(1).getVal()).isEqualTo(ByteString.copyFrom("esa3".getBytes()));
-    storageService.delete("esa");
+    assertThat(ops.get(2).getType()).isEqualTo(Common.OpType.SNAPSHOT);
+    assertThat(ops.get(2).getSnapshotId()).isEqualTo(1);
   }
 
 }

@@ -125,7 +125,13 @@ public class Storage implements Closeable {
               ByteBuffer.allocate(4 + op.getVal().size()).putInt(op.getVal().size()).put(op.getVal().toByteArray()).array());
           break;
         case DEL:
-          wb.delete(op.getKey().getBytes());
+          if (".all".equals(op.getKey())) {
+            RocksIterator it = rocksDB.newIterator();
+            while(it.isValid())
+              wb.delete(it.key());
+              it.next();
+          } else
+            wb.delete(op.getKey().getBytes());
           break;
         case ADD_TO_LIST:
           wb.merge(op.getKey().getBytes(),

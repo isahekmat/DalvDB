@@ -23,6 +23,7 @@ import io.grpc.stub.StreamObserver;
 import org.dalvdb.client.conflict.Conflict;
 import org.dalvdb.client.conflict.ConflictResolver;
 import org.dalvdb.common.util.ByteUtil;
+import org.dalvdb.common.util.OpUtil;
 import org.dalvdb.common.watch.WatchEvent;
 import org.dalvdb.common.watch.Watcher;
 import org.dalvdb.proto.ClientProto;
@@ -161,11 +162,18 @@ public class DalvClient implements Closeable {
     }
     Map<String, List<Common.Operation>> conflictMap = new HashMap<>();
     for (Common.Operation op : opsList) {
-      if (!unsyncedMap.containsKey(op.getKey())) {
+      if (OpUtil.REMOVE_ALL_OP.equals(op)) {
+        for (String k : unsyncedMap.keySet()) {
+          putToMap(conflictMap,
+              Common.Operation.newBuilder()
+                  .setType(Common.OpType.DEL)
+                  .setKey(k)
+              .build());
+        }
+      } else if (!unsyncedMap.containsKey(op.getKey()))
         opsWithoutConflict.add(op);
-        continue;
-      }
-      putToMap(conflictMap, op);
+      else
+        putToMap(conflictMap, op);
     }
 
     List<Conflict> conflictList = new LinkedList<>();
