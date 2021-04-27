@@ -339,4 +339,35 @@ public class RocksStorageServiceTest {
     assertThat(ops.get(1).getType()).isEqualTo(Common.OpType.SNAPSHOT);
     assertThat(ops.get(1).getSnapshotId()).isEqualTo(2);
   }
+
+  @Test
+  public void severalSnapshotAndListInTheCompaction(){
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey("theme")
+        .setVal(ByteString.copyFrom("blue".getBytes()))
+        .build());
+    assertThat(storageService.snapshot("esa")).isEqualTo(1);
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.ADD_TO_LIST)
+        .setKey("theme")
+        .setVal(ByteString.copyFrom("red".getBytes()))
+        .build());
+    assertThat(storageService.snapshot("esa")).isEqualTo(2);
+    storageService.addOperation("esa", Common.Operation.newBuilder()
+        .setType(Common.OpType.REMOVE_FROM_LIST)
+        .setKey("theme")
+        .setVal(ByteString.copyFrom("red".getBytes()))
+        .build());
+    storageService.compact("esa");
+    List<Common.Operation> ops = storageService.get("esa", 1);
+    assertThat(ops.size()).isEqualTo(3);
+    assertThat(ops.get(0).getType()).isEqualTo(OpUtil.REMOVE_ALL_OP.getType());
+    assertThat(ops.get(0).getKey()).isEqualTo(OpUtil.REMOVE_ALL_OP.getKey());
+    assertThat(ops.get(1).getType()).isEqualTo(Common.OpType.PUT);
+    assertThat(ops.get(1).getKey()).isEqualTo("theme");
+    assertThat(ops.get(1).getVal()).isEqualTo(ByteString.copyFrom("blue".getBytes()));
+    assertThat(ops.get(2).getType()).isEqualTo(Common.OpType.SNAPSHOT);
+    assertThat(ops.get(2).getSnapshotId()).isEqualTo(3);
+  }
 }

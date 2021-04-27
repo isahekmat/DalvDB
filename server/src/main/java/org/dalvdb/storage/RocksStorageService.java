@@ -294,14 +294,14 @@ public class RocksStorageService implements StorageService {
     boolean first = true;
     while (iterator.hasNext()) {
       Common.Operation op = iterator.next();
-      if (op.getType() == Common.OpType.SNAPSHOT) {
-        if (first) {
+      if (first) {
+        if (op.getType() == Common.OpType.SNAPSHOT) {
           result.addFirst(op);
+          continue;
         }
         first = false;
-        continue;
       }
-      if (ignoreKeys.contains(op.getKey())) continue;
+      if (op.getType() == Common.OpType.SNAPSHOT || ignoreKeys.contains(op.getKey())) continue;
       if ((op.getType() == Common.OpType.ADD_TO_LIST || op.getType() == Common.OpType.PUT) &&
           ignoreItemInList.containsKey(op.getKey()) &&
           ignoreItemInList.get(op.getKey()).contains(op.getVal()))
