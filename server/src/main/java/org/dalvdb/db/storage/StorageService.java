@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dalvdb.storage;
+package org.dalvdb.db.storage;
 
 import com.google.protobuf.ByteString;
 import dalv.common.Common;

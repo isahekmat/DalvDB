@@ -18,12 +18,13 @@
 package org.dalvdb;
 
 
+import org.dalvdb.cluster.DalvCluster;
 import org.dalvdb.service.backend.BackendService;
 import org.dalvdb.watch.InMemoryWatchManager;
 import org.dalvdb.watch.WatchManager;
 import org.dalvdb.service.client.ClientService;
-import org.dalvdb.storage.RocksStorageService;
-import org.dalvdb.storage.StorageService;
+import org.dalvdb.db.storage.RocksStorageService;
+import org.dalvdb.db.storage.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,14 +47,10 @@ public class DalvServer implements Closeable {
 
   private DalvServer() {
     this.storageService = new RocksStorageService();
-    if (!DalvConfig.getBoolean(DalvConfig.SINGLETON_MODE))
-      this.cluster = new DalvCluster();
-    else
-      this.cluster = null;
-    //TODO should be changed to handle clients watches also
+    this.cluster = new DalvCluster();
     WatchManager watchManager = new InMemoryWatchManager();
     this.clientService = new ClientService(this.storageService, watchManager);
-    this.backendService = new BackendService(this.storageService, watchManager);
+    this.backendService = new BackendService(this.storageService, watchManager,this.cluster);
     logger.info("Dalv server started up");
   }
 
@@ -105,8 +102,7 @@ public class DalvServer implements Closeable {
   public void close() throws IOException {
     this.clientService.close();
     this.backendService.close();
-    if (cluster != null)
-      this.cluster.close();
+    this.cluster.close();
     this.storageService.close();
   }
 }

@@ -15,34 +15,32 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dalvdb.service.backend;
+package org.dalvdb.db;
 
 import com.google.protobuf.ByteString;
 import dalv.common.Common;
 import io.grpc.stub.StreamObserver;
 import org.dalvdb.DalvConfig;
+import org.dalvdb.db.storage.StorageService;
 import org.dalvdb.exception.InternalServerException;
 import org.dalvdb.lock.UserLockManager;
 import org.dalvdb.proto.BackendProto;
-import org.dalvdb.proto.BackendServerGrpc;
-import org.dalvdb.storage.StorageService;
 import org.dalvdb.watch.WatchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase {
-  private static final Logger logger = LoggerFactory.getLogger(BackendServiceImpl.class);
+public class BackendRequestHandler {
+  private static final Logger logger = LoggerFactory.getLogger(BackendRequestHandler.class);
   private final StorageService storageService;
   private final UserLockManager userLockManager;
   private final WatchManager watchManager;
 
-  public BackendServiceImpl(StorageService storageService, WatchManager watchManager) {
+  public BackendRequestHandler(StorageService storageService, WatchManager watchManager) {
     this.storageService = storageService;
     this.watchManager = watchManager;
     this.userLockManager = UserLockManager.getInstance();
   }
 
-  @Override
   public void get(BackendProto.GetRequest request, StreamObserver<BackendProto.GetResponse> responseObserver) {
     logger.debug("GET command received: userId:{} key:{}", request.getUserId(), request.getKey());
     BackendProto.GetResponse response;
@@ -67,7 +65,6 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
     }
   }
 
-  @Override
   public void put(BackendProto.PutRequest request, StreamObserver<BackendProto.PutResponse> responseObserver) {
     try {
       logger.debug("PUT command received: userId:{} key:{}", request.getUserId(), request.getKey());
@@ -99,7 +96,6 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
     }
   }
 
-  @Override
   public void del(BackendProto.DelRequest request, StreamObserver<BackendProto.DelResponse> responseObserver) {
     try {
       logger.debug("DEL command received: userId:{} key:{}", request.getUserId(), request.getKey());
@@ -129,7 +125,6 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
     }
   }
 
-  @Override
   public void addToList(BackendProto.AddToListRequest request, StreamObserver<BackendProto.AddToListResponse> responseObserver) {
     logger.debug("ADD_TO_LIST command received: userId:{} listKey:{}", request.getUserId(), request.getListKey());
     BackendProto.AddToListResponse response;
@@ -150,17 +145,16 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
       } else {
         response = BackendProto.AddToListResponse.newBuilder().setRepType(Common.RepType.NOK).build();
       }
-    responseObserver.onNext(response);
-    responseObserver.onCompleted();
-    if (response.getRepType() == Common.RepType.OK)
-      watchManager.notifyChange(request.getUserId(), op);
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+      if (response.getRepType() == Common.RepType.OK)
+        watchManager.notifyChange(request.getUserId(), op);
     } catch (InternalServerException | InterruptedException e) {
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
     }
   }
 
-  @Override
   public void removeFromList(BackendProto.RemoveFromListRequest request, StreamObserver<BackendProto.RemoveFromListResponse> responseObserver) {
     try {
       logger.debug("REMOVE_FROM_LIST command received: userId:{} listKey:{}", request.getUserId(), request.getListKey());
@@ -192,14 +186,12 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
     }
   }
 
-  @Override
   public void watch(BackendProto.WatchRequest request, StreamObserver<BackendProto.WatchResponse> responseObserver) {
     logger.debug("BACKEND WATCH command received on key:{}", request.getKey());
     watchManager.addBackendWatch(request.getKey(), responseObserver);
     logger.debug("BACKEND WATCH command processed on key:{}", request.getKey());
   }
 
-  @Override
   public void watchCancel(BackendProto.WatchCancelRequest request,
                           StreamObserver<BackendProto.WatchCancelResponse> responseObserver) {
     logger.debug("BACKEND WATCH CANCEL command received on key:{}", request.getKey());
@@ -209,7 +201,6 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
     logger.debug("BACKEND WATCH CANCEL command processed on key:{}", request.getKey());
   }
 
-  @Override
   public void watchCancelAll(Common.Empty request,
                              StreamObserver<BackendProto.WatchCancelResponse> responseObserver) {
     logger.debug("BACKEND WATCH CANCEL ALL command received");

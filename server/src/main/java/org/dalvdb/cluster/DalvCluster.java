@@ -15,9 +15,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dalvdb;
+package org.dalvdb.cluster;
 
 import org.apache.zookeeper.ZooKeeper;
+import org.dalvdb.DalvConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,23 +30,27 @@ public class DalvCluster implements Closeable {
   private final ZooKeeper zk;
 
   public DalvCluster() {
-    String zkConnectionStr = DalvConfig.getStr(DalvConfig.ZK_CONNECTION_STRING);
-    int zkSessionTimeout = DalvConfig.getInt(DalvConfig.ZK_SESSION_TIMEOUT);
-    ZooKeeper tempZk = null;
-    try {
-      tempZk = new ZooKeeper(zkConnectionStr, zkSessionTimeout, new ZKWatcher());
-    } catch (IOException e) {
-      logger.error("could not connect to zookeeper by the address {}", zkConnectionStr, e);
-      System.exit(1);
-    }
-    zk = tempZk;
-    //TODO: takeover leader role for some users from the cluster on startup
+    if (!DalvConfig.getBoolean(DalvConfig.SINGLETON_MODE)) {
+      String zkConnectionStr = DalvConfig.getStr(DalvConfig.ZK_CONNECTION_STRING);
+      int zkSessionTimeout = DalvConfig.getInt(DalvConfig.ZK_SESSION_TIMEOUT);
+      ZooKeeper tempZk = null;
+      try {
+        tempZk = new ZooKeeper(zkConnectionStr, zkSessionTimeout, new ZKWatcher());
+      } catch (IOException e) {
+        logger.error("could not connect to zookeeper by the address {}", zkConnectionStr, e);
+        System.exit(1);
+      }
+      zk = tempZk;
+      //TODO: takeover leader role for some users from the cluster on startup
+    } else
+      zk = null;
   }
 
   @Override
   public void close() throws IOException {
     try {
-      zk.close();
+      if (zk != null)
+        zk.close();
     } catch (InterruptedException e) {
       throw new IOException("could not close zookeeper connection", e);
     }

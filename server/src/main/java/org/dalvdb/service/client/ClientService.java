@@ -21,7 +21,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.dalvdb.DalvConfig;
 import org.dalvdb.watch.WatchManager;
-import org.dalvdb.storage.StorageService;
+import org.dalvdb.db.storage.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

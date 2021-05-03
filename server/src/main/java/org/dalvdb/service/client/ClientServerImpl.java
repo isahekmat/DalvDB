@@ -26,7 +26,7 @@ import org.dalvdb.exception.InternalServerException;
 import org.dalvdb.lock.UserLockManager;
 import org.dalvdb.proto.ClientProto;
 import org.dalvdb.proto.ClientServerGrpc;
-import org.dalvdb.storage.StorageService;
+import org.dalvdb.db.storage.StorageService;
 import org.dalvdb.watch.WatchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -20,7 +20,9 @@ package org.dalvdb.service.backend;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.dalvdb.DalvConfig;
-import org.dalvdb.storage.StorageService;
+import org.dalvdb.cluster.DalvCluster;
+import org.dalvdb.db.BackendRequestHandler;
+import org.dalvdb.db.storage.StorageService;
 import org.dalvdb.watch.WatchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,11 +36,11 @@ public class BackendService implements Closeable {
   private final Server server;
   private final WatchManager watchManager;
 
-  public BackendService(StorageService storageService, WatchManager watchManager) {
+  public BackendService(StorageService storageService, WatchManager watchManager, DalvCluster cluster) {
     this.watchManager = watchManager;
     final int port = DalvConfig.getInt(DalvConfig.BACKEND_PORT);
     server = ServerBuilder.forPort(port)
-        .addService(new BackendServiceImpl(storageService, watchManager)).build();
+        .addService(new BackendServiceProxy(new BackendRequestHandler(storageService, watchManager), cluster)).build();
     try {
       server.start();
     } catch (IOException e) {
