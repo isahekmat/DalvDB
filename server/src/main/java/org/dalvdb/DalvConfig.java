@@ -58,7 +58,7 @@ public final class DalvConfig {
     config.put(SINGLETON_MODE, true);
     config.put(DATA_DIR, ".dalv-data/");
     config.put(ZK_CONNECTION_STRING, "localhost:2181");
-    config.put(ZK_SESSION_TIMEOUT, 100);
+    config.put(ZK_SESSION_TIMEOUT, 10000);
     config.put(CLIENT_PORT, 7472);
     config.put(JWT_SIGN, "havijfarangichekhoobehavijfarangichekhoobehavijfarangichekhoobe");
     config.put(LOCK_TIMEOUT, 20);
