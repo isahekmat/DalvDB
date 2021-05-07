@@ -17,13 +17,13 @@
 
 package org.dalvdb.watch;
 
+import com.google.common.annotations.VisibleForTesting;
 import dalv.common.Common;
 import io.grpc.stub.StreamObserver;
 import org.dalvdb.DalvConfig;
 import org.dalvdb.proto.BackendProto;
 import org.dalvdb.proto.ClientProto;
 
-import java.io.Closeable;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -33,13 +33,24 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class InMemoryWatchManager implements WatchManager, Closeable {
+public class InMemoryWatchManager implements WatchManager {
+  private static InMemoryWatchManager instance;
 
   private final ReadWriteLock lock = new ReentrantReadWriteLock();
   private final Map<String, List<StreamObserver<BackendProto.WatchResponse>>> backendWatches = new HashMap<>();
   private final Map<String, Map<String, List<StreamObserver<ClientProto.WatchResponse>>>> clientWatches = new HashMap<>();
   private final ExecutorService watcherExecutor = Executors.newFixedThreadPool(
       DalvConfig.getInt(DalvConfig.WATCHER_THREAD_NUM));
+
+  public static synchronized InMemoryWatchManager getInstance() {
+    if (instance == null) {
+      instance = new InMemoryWatchManager();
+    }
+    return instance;
+  }
+
+  private InMemoryWatchManager() {
+  }
 
   @Override
   public void addBackendWatch(String key, StreamObserver<BackendProto.WatchResponse> responseObserver) {
@@ -161,5 +172,11 @@ public class InMemoryWatchManager implements WatchManager, Closeable {
     } finally {
       lock.writeLock().unlock();
     }
+  }
+
+  @VisibleForTesting
+  void clear() {
+    backendWatches.clear();
+    clientWatches.clear();
   }
 }

@@ -39,13 +39,22 @@ import java.util.stream.Collectors;
  */
 public class RocksStorageService implements StorageService {
   private static final Logger logger = LoggerFactory.getLogger(RocksStorageService.class);
+  private static RocksStorageService instance;
   private final RocksDB rocksDB;
   private final WriteOptions wo;
   private final Map<String, Queue<Common.Operation>> mirroredUser = new HashMap<>();
   private final ColumnFamilyHandle metaData;
   private final CompactionScheduler compactionScheduler;
 
-  public RocksStorageService() {
+  public static synchronized RocksStorageService getInstance() {
+    if (instance == null) {
+      instance = new RocksStorageService();
+    }
+    return instance;
+  }
+
+  private RocksStorageService() {
+    logger.debug("rocks storage starting...");
     String dataDir = DalvConfig.getStr(DalvConfig.DATA_DIR);
     RocksDB db = null;
     WriteOptions writeOptions = null;
@@ -365,5 +374,8 @@ public class RocksStorageService implements StorageService {
     metaData.close();
     wo.close();
     rocksDB.close();
+    synchronized (RocksStorageService.class) {
+      instance = null;
+    }
   }
 }

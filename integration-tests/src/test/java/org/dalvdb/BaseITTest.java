@@ -15,10 +15,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dalvdb.it;
+package org.dalvdb;
 
 import org.apache.commons.io.FileUtils;
-import org.dalvdb.DalvServer;
 import org.dalvdb.client.DalvClient;
 import org.dalvdb.client.DalvClientBuilder;
 import org.junit.After;

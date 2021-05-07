@@ -22,6 +22,8 @@ import dalv.common.Common;
 import io.grpc.stub.StreamObserver;
 import org.dalvdb.proto.BackendProto;
 import org.dalvdb.proto.ClientProto;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,10 +31,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class InMemoryWatchManagerTest {
+  private InMemoryWatchManager wm;
+
+  @Before
+  public void setup() {
+    wm = InMemoryWatchManager.getInstance();
+  }
+
+  @After
+  public void tearDown() {
+    wm.clear();
+  }
 
   @Test
   public void simpleBackendWatchTest() throws InterruptedException {
-    WatchManager wm = new InMemoryWatchManager();
     MockStreamObserver<BackendProto.WatchResponse> mockBack = new MockStreamObserver<>();
     wm.addBackendWatch("testKey", mockBack);
     wm.notifyChange("someUser", Common.Operation.newBuilder()
@@ -48,7 +60,6 @@ public class InMemoryWatchManagerTest {
 
   @Test
   public void simpleClientWatchTest() throws InterruptedException {
-    WatchManager wm = new InMemoryWatchManager();
     MockStreamObserver<ClientProto.WatchResponse> mockClient = new MockStreamObserver<>();
     wm.addClientWatch("someUser", "testKey", mockClient);
     wm.notifyChange("someUser", Common.Operation.newBuilder()
@@ -64,7 +75,6 @@ public class InMemoryWatchManagerTest {
 
   @Test
   public void anotherClientWatchTest() throws InterruptedException {
-    WatchManager wm = new InMemoryWatchManager();
     MockStreamObserver<ClientProto.WatchResponse> mockClient = new MockStreamObserver<>();
     wm.addClientWatch("someUser", "testKey", mockClient);
     wm.notifyChange("anotherUser", Common.Operation.newBuilder()
@@ -80,7 +90,6 @@ public class InMemoryWatchManagerTest {
 
   @Test
   public void closeTest() throws InterruptedException {
-    WatchManager wm = new InMemoryWatchManager();
     MockStreamObserver<ClientProto.WatchResponse> mockClient = new MockStreamObserver<>();
     MockStreamObserver<BackendProto.WatchResponse> mockBack = new MockStreamObserver<>();
     wm.addClientWatch("someUser", "testKey", mockClient);

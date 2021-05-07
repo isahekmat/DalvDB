@@ -18,6 +18,7 @@
 package org.dalvdb.it;
 
 import dalv.common.Common;
+import org.dalvdb.BaseITTest;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicBoolean;

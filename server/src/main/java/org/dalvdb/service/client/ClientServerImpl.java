@@ -22,11 +22,11 @@ import io.grpc.stub.StreamObserver;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SecurityException;
 import org.dalvdb.DalvConfig;
+import org.dalvdb.db.storage.StorageService;
 import org.dalvdb.exception.InternalServerException;
 import org.dalvdb.lock.UserLockManager;
 import org.dalvdb.proto.ClientProto;
 import org.dalvdb.proto.ClientServerGrpc;
-import org.dalvdb.db.storage.StorageService;
 import org.dalvdb.watch.WatchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,16 +36,18 @@ import java.util.Objects;
 
 public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
   private static final Logger logger = LoggerFactory.getLogger(ClientServerImpl.class);
-  private final StorageService storage;
-  private final UserLockManager userLockManager;
-  private final WatchManager watchManager;
+  private static ClientServerImpl instance;
   private final JwtParser parser = Jwts.parserBuilder()
       .setSigningKey(DalvConfig.getStr(DalvConfig.JWT_SIGN)).build();
 
-  public ClientServerImpl(StorageService storage, WatchManager watchManager) {
-    this.storage = storage;
-    this.userLockManager = UserLockManager.getInstance();
-    this.watchManager = watchManager;
+  public static synchronized ClientServerImpl getInstance() {
+    if (instance == null) {
+      instance = new ClientServerImpl();
+    }
+    return instance;
+  }
+
+  private ClientServerImpl() {
   }
 
   @Override
@@ -53,7 +55,7 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
     logger.debug("CLIENT WATCH command received on key:{}", request.getKey());
     String jwt = request.getJwt();
     String userId = validate(jwt);
-    watchManager.addClientWatch(userId, request.getKey(), responseObserver);
+    WatchManager.getInstance().addClientWatch(userId, request.getKey(), responseObserver);
     logger.debug("CLIENT WATCH command processed on key:{}", request.getKey());
   }
 
@@ -63,7 +65,7 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
     logger.debug("CLIENT WATCH CANCEL command received on key:{}", request.getKey());
     String jwt = request.getJwt();
     String userId = validate(jwt);
-    watchManager.cancelClientWatch(userId,request.getKey());
+    WatchManager.getInstance().cancelClientWatch(userId, request.getKey());
     responseObserver.onNext(ClientProto.WatchCancelResponse.newBuilder().setResponse(Common.RepType.OK).build());
     responseObserver.onCompleted();
     logger.debug("CLIENT WATCH CANCEL command processed on key:{}", request.getKey());
@@ -75,7 +77,7 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
     logger.debug("CLIENT WATCH CANCEL ALL command received");
     String jwt = request.getJwt();
     String userId = validate(jwt);
-    watchManager.cancelAllClientWatch(userId);
+    WatchManager.getInstance().cancelAllClientWatch(userId);
     responseObserver.onNext(ClientProto.WatchCancelResponse.newBuilder().setResponse(Common.RepType.OK).build());
     responseObserver.onCompleted();
     logger.debug("CLIENT WATCH CANCEL ALL command processed");
@@ -103,7 +105,7 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
     }
     responseObserver.onNext(res);
     responseObserver.onCompleted();
-    watchManager.notifyChange(userId, request.getOpsList());
+    WatchManager.getInstance().notifyChange(userId, request.getOpsList());
   }
 
   private ClientProto.SyncResponse handleSync(String userId, ClientProto.SyncRequest request)
@@ -122,13 +124,13 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
   private ClientProto.SyncResponse handleSyncWithoutUpdate(String userId, ClientProto.SyncRequest request) throws InterruptedException {
     ClientProto.SyncResponse.Builder resBuilder = ClientProto.SyncResponse.newBuilder();
     //TODO: maybe it's better to retry for a limited time if it cannot acquire the lock
-    if (userLockManager.tryReadLock(userId, DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
+    if (UserLockManager.getInstance().tryReadLock(userId, DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
       try {
         read(userId, request.getLastSnapshotId(), resBuilder);
         resBuilder.setSyncResponse(Common.RepType.OK);
         return resBuilder.build();
       } finally {
-        userLockManager.releaseReadLock(userId);
+        UserLockManager.getInstance().releaseReadLock(userId);
       }
     }
     resBuilder.setSyncResponse(Common.RepType.NOK);
@@ -138,14 +140,14 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
   private ClientProto.SyncResponse handleSyncWithUpdate(String userId, ClientProto.SyncRequest request) throws InterruptedException {
     ClientProto.SyncResponse.Builder resBuilder = ClientProto.SyncResponse.newBuilder();
     //TODO: maybe it's better to retry for a limited time if it cannot acquire the lock
-    if (userLockManager.tryWriteLock(userId, DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
+    if (UserLockManager.getInstance().tryWriteLock(userId, DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
       try {
-        boolean updatesHandledSuccessfully = storage.handleOperations(userId, request.getOpsList(), request.getLastSnapshotId());
+        boolean updatesHandledSuccessfully = StorageService.getInstance().handleOperations(userId, request.getOpsList(), request.getLastSnapshotId());
         resBuilder.setSyncResponse(updatesHandledSuccessfully ? Common.RepType.OK : Common.RepType.NOK);
         read(userId, request.getLastSnapshotId(), resBuilder);
         return resBuilder.build();
       } finally {
-        userLockManager.releaseWriteLock(userId);
+        UserLockManager.getInstance().releaseWriteLock(userId);
       }
     }
     resBuilder.setSyncResponse(Common.RepType.NOK);
@@ -154,12 +156,12 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
 
   private void read(String userId, int lastSnapshotId,
                     ClientProto.SyncResponse.Builder responseBuilder) {
-    List<Common.Operation> ops = storage.get(userId, lastSnapshotId);
+    List<Common.Operation> ops = StorageService.getInstance().get(userId, lastSnapshotId);
     responseBuilder.addAllOps(ops);
     if (ops.isEmpty() || ops.get(ops.size() - 1).getType() == Common.OpType.SNAPSHOT) {
       responseBuilder.setSnapshotId(lastSnapshotId);
     } else {
-      responseBuilder.setSnapshotId(storage.snapshot(userId));
+      responseBuilder.setSnapshotId(StorageService.getInstance().snapshot(userId));
     }
   }
 

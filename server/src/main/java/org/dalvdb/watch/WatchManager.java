@@ -23,9 +23,15 @@ import io.grpc.stub.StreamObserver;
 import org.dalvdb.proto.BackendProto;
 import org.dalvdb.proto.ClientProto;
 
+import java.io.Closeable;
 import java.util.List;
 
-public interface WatchManager {
+public interface WatchManager extends Closeable {
+
+  static WatchManager getInstance() {
+    return InMemoryWatchManager.getInstance();
+  }
+
   void addBackendWatch(String key, StreamObserver<BackendProto.WatchResponse> responseObserver);
 
   void addClientWatch(String userId, String key, StreamObserver<ClientProto.WatchResponse> responseObserver);
@@ -41,6 +47,4 @@ public interface WatchManager {
   void cancelAllBackendWatch();
 
   void cancelBackendWatch(String key);
-
-  void close();
 }

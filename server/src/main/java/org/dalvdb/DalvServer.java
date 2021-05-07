@@ -18,13 +18,12 @@
 package org.dalvdb;
 
 
+import com.google.common.annotations.VisibleForTesting;
 import org.dalvdb.cluster.DalvCluster;
-import org.dalvdb.service.backend.BackendService;
-import org.dalvdb.watch.InMemoryWatchManager;
-import org.dalvdb.watch.WatchManager;
-import org.dalvdb.service.client.ClientService;
-import org.dalvdb.db.storage.RocksStorageService;
 import org.dalvdb.db.storage.StorageService;
+import org.dalvdb.service.backend.BackendService;
+import org.dalvdb.service.client.ClientService;
+import org.dalvdb.watch.WatchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,13 +43,14 @@ public class DalvServer implements Closeable {
   private final DalvCluster cluster;
   private final ClientService clientService;
   private final BackendService backendService;
+  private final WatchManager watchManager;
 
   private DalvServer() {
-    this.storageService = new RocksStorageService();
     this.cluster = new DalvCluster();
-    WatchManager watchManager = new InMemoryWatchManager();
-    this.clientService = new ClientService(this.storageService, watchManager);
-    this.backendService = new BackendService(this.storageService, watchManager,this.cluster);
+    this.storageService = StorageService.getInstance();
+    this.watchManager = WatchManager.getInstance();
+    this.clientService = new ClientService();
+    this.backendService = new BackendService();
     logger.info("Dalv server started up");
   }
 
@@ -62,7 +62,7 @@ public class DalvServer implements Closeable {
    */
   public static void main(String[] args) {
     final DalvServer server = startServer(args);
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       try {
         server.close();
       } catch (IOException e) {
@@ -71,10 +71,8 @@ public class DalvServer implements Closeable {
     }));
   }
 
-  /**
-   * This is an internal method which is public just for the integration tests
-   */
-  public static DalvServer startServer(String[] args) {
+  @VisibleForTesting
+  static DalvServer startServer(String[] args) {
     try {
       if (args.length == 0)
         DalvConfig.loadFromEnvironmentVariable();
@@ -104,5 +102,6 @@ public class DalvServer implements Closeable {
     this.backendService.close();
     this.cluster.close();
     this.storageService.close();
+    this.watchManager.close();
   }
 }

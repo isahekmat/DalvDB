@@ -20,8 +20,6 @@ package org.dalvdb.service.client;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.dalvdb.DalvConfig;
-import org.dalvdb.watch.WatchManager;
-import org.dalvdb.db.storage.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,9 +31,9 @@ public class ClientService implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(ClientService.class);
   private final Server server;
 
-  public ClientService(StorageService storageService, WatchManager watchManager) {
+  public ClientService() {
     final int port = DalvConfig.getInt(DalvConfig.CLIENT_PORT);
-    server = ServerBuilder.forPort(port).addService(new ClientServerImpl(storageService, watchManager)).build();
+    server = ServerBuilder.forPort(port).addService(ClientServerImpl.getInstance()).build();
     try {
       server.start();
     } catch (IOException e) {

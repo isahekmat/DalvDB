@@ -17,6 +17,7 @@
 
 package org.dalvdb.it;
 
+import org.dalvdb.BaseITTest;
 import org.dalvdb.client.conflict.resolver.AcceptServerResolver;
 import org.junit.Test;
 

@@ -31,6 +31,10 @@ import java.util.List;
  */
 public interface StorageService extends Closeable {
 
+  static StorageService getInstance() {
+    return RocksStorageService.getInstance();
+  }
+
   /**
    * handle all operations for a user in an atomic way.
    *

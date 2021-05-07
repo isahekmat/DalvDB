@@ -44,7 +44,7 @@ public class RocksStorageServiceTest {
   @BeforeClass
   public static void setUp() {
     DalvConfig.set(DalvConfig.DATA_DIR, UUID.randomUUID().toString());
-    storageService = new RocksStorageService();
+    storageService = RocksStorageService.getInstance();
   }
 
   @After
