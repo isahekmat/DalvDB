@@ -17,11 +17,7 @@
 
 package org.dalvdb.cluster;
 
-import com.google.common.primitives.UnsignedInteger;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.*;
 import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.ACL;
 import org.dalvdb.DalvConfig;
@@ -33,10 +29,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DalvCluster implements Closeable {
-  private static final Logger logger = LoggerFactory.getLogger(DalvCluster.class);
+public class ClusterRing implements Closeable, Watcher {
+  private static final Logger logger = LoggerFactory.getLogger(ClusterRing.class);
+  private static ClusterRing instance;
+
   private final ZooKeeper zk;
-  private final boolean singleton;
   private final static String BASE_PATH = "/dalv";
   private final static String NODE_PATH = BASE_PATH + "/node";
   private final static String RING_PATH = BASE_PATH + "/ring";
@@ -44,29 +41,30 @@ public class DalvCluster implements Closeable {
   private final static byte[] RUNNING = "running".getBytes();
   private final String nodeId;
 
-  public DalvCluster() {
-    singleton = DalvConfig.getBoolean(DalvConfig.SINGLETON_MODE);
-    if (!singleton) {
-      String zkConnectionStr = DalvConfig.getStr(DalvConfig.ZK_CONNECTION_STRING);
-      int zkSessionTimeout = DalvConfig.getInt(DalvConfig.ZK_SESSION_TIMEOUT);
-      ZooKeeper tempZk = null;
-      try {
-        tempZk = new ZooKeeper(zkConnectionStr, zkSessionTimeout, new ZKWatcher(), getZkConfig());
-      } catch (IOException e) {
-        logger.error("could not connect to zookeeper by the address {}", zkConnectionStr, e);
-        System.exit(1);
-      }
-      zk = tempZk;
-      nodeId = DalvConfig.getStr(DalvConfig.NODE_ID);
-      try {
-        bootstrap();
-      } catch (KeeperException | InterruptedException e) {
-        logger.error("could not bootstrap in cluster", e);
-        System.exit(1);
-      }
-    } else {
-      zk = null;
-      nodeId = null;
+  public static ClusterRing getInstance() {
+    if (instance == null) {
+      instance = new ClusterRing();
+    }
+    return instance;
+  }
+
+  private ClusterRing() {
+    String zkConnectionStr = DalvConfig.getStr(DalvConfig.ZK_CONNECTION_STRING);
+    int zkSessionTimeout = DalvConfig.getInt(DalvConfig.ZK_SESSION_TIMEOUT);
+    ZooKeeper tempZk = null;
+    try {
+      tempZk = new ZooKeeper(zkConnectionStr, zkSessionTimeout, this, getZkConfig());
+    } catch (IOException e) {
+      logger.error("could not connect to zookeeper by the address {}", zkConnectionStr, e);
+      System.exit(1);
+    }
+    zk = tempZk;
+    nodeId = DalvConfig.getStr(DalvConfig.NODE_ID);
+    try {
+      bootstrap();
+    } catch (KeeperException | InterruptedException e) {
+      logger.error("could not bootstrap in cluster", e);
+      System.exit(1);
     }
   }
 
@@ -85,7 +83,7 @@ public class DalvCluster implements Closeable {
 
     //TODO: pick tokens
     //sample
-    int[] tokens = new int[]{1, 1<<6, 1<<12, 1<<14, 1<<18,1<<22,1<<23,1<<25,1<<26,1<<27};
+    int[] tokens = new int[]{1, 1 << 6, 1 << 12, 1 << 14, 1 << 18, 1 << 22, 1 << 23, 1 << 25, 1 << 26, 1 << 27};
     //TODO: ask for data from other nodes
 
     //TODO: watch node list
@@ -99,8 +97,8 @@ public class DalvCluster implements Closeable {
     acls.add(new ACL(ZooDefs.Perms.ALL, ZooDefs.Ids.ANYONE_ID_UNSAFE));
     try {
       zk.create(BASE_PATH, null, acls, CreateMode.PERSISTENT);
-    zk.create(NODE_PATH, null, acls, CreateMode.PERSISTENT);
-    zk.create(RING_PATH, null, acls, CreateMode.PERSISTENT);
+      zk.create(NODE_PATH, null, acls, CreateMode.PERSISTENT);
+      zk.create(RING_PATH, null, acls, CreateMode.PERSISTENT);
     } catch (KeeperException | InterruptedException e) {
     }
   }
@@ -108,10 +106,19 @@ public class DalvCluster implements Closeable {
   @Override
   public void close() throws IOException {
     try {
-      if (zk != null)
-        zk.close();
+      zk.close();
     } catch (InterruptedException e) {
       throw new IOException("could not close zookeeper connection", e);
     }
+  }
+
+  @Override
+  public void process(WatchedEvent event) {
+    System.out.println(event);
+    //TODO
+  }
+
+  public String leaderOf(String key) {
+    return "";
   }
 }

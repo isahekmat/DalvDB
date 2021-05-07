@@ -19,7 +19,7 @@ package org.dalvdb;
 
 
 import com.google.common.annotations.VisibleForTesting;
-import org.dalvdb.cluster.DalvCluster;
+import org.dalvdb.cluster.Locator;
 import org.dalvdb.db.storage.StorageService;
 import org.dalvdb.service.backend.BackendService;
 import org.dalvdb.service.client.ClientService;
@@ -40,13 +40,13 @@ import java.io.IOException;
 public class DalvServer implements Closeable {
   private static final Logger logger = LoggerFactory.getLogger(DalvServer.class);
   private final StorageService storageService;
-  private final DalvCluster cluster;
+  private final Locator locator;
   private final ClientService clientService;
   private final BackendService backendService;
   private final WatchManager watchManager;
 
   private DalvServer() {
-    this.cluster = new DalvCluster();
+    this.locator = Locator.getInstance();
     this.storageService = StorageService.getInstance();
     this.watchManager = WatchManager.getInstance();
     this.clientService = new ClientService();
@@ -100,7 +100,7 @@ public class DalvServer implements Closeable {
   public void close() throws IOException {
     this.clientService.close();
     this.backendService.close();
-    this.cluster.close();
+    this.locator.close();
     this.storageService.close();
     this.watchManager.close();
   }
