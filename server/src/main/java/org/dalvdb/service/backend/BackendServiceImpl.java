@@ -25,18 +25,18 @@ import org.dalvdb.proto.BackendServerGrpc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BackendServiceProxy extends BackendServerGrpc.BackendServerImplBase {
-  private static final Logger logger = LoggerFactory.getLogger(BackendServiceProxy.class);
-  private static BackendServiceProxy instance;
+public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase {
+  private static final Logger logger = LoggerFactory.getLogger(BackendServiceImpl.class);
+  private static BackendServiceImpl instance;
 
-  public static BackendServiceProxy getInstance() {
+  public static BackendServiceImpl getInstance() {
     if (instance == null) {
-      instance = new BackendServiceProxy();
+      instance = new BackendServiceImpl();
     }
     return instance;
   }
 
-  private BackendServiceProxy() {
+  private BackendServiceImpl() {
   }
 
   @Override

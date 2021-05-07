@@ -22,16 +22,12 @@ import io.grpc.stub.StreamObserver;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SecurityException;
 import org.dalvdb.DalvConfig;
-import org.dalvdb.db.storage.StorageService;
-import org.dalvdb.exception.InternalServerException;
-import org.dalvdb.lock.UserLockManager;
+import org.dalvdb.db.ClientRequestHandler;
 import org.dalvdb.proto.ClientProto;
 import org.dalvdb.proto.ClientServerGrpc;
-import org.dalvdb.watch.WatchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Objects;
 
 public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
@@ -52,117 +48,35 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
 
   @Override
   public void watch(ClientProto.WatchRequest request, StreamObserver<ClientProto.WatchResponse> responseObserver) {
-    logger.debug("CLIENT WATCH command received on key:{}", request.getKey());
-    String jwt = request.getJwt();
-    String userId = validate(jwt);
-    WatchManager.getInstance().addClientWatch(userId, request.getKey(), responseObserver);
-    logger.debug("CLIENT WATCH command processed on key:{}", request.getKey());
+    String userId = validate(request.getJwt());
+    ClientRequestHandler.getInstance().watch(userId, request, responseObserver);
   }
 
   @Override
   public void watchCancel(ClientProto.WatchCancelRequest request,
                           StreamObserver<ClientProto.WatchCancelResponse> responseObserver) {
-    logger.debug("CLIENT WATCH CANCEL command received on key:{}", request.getKey());
-    String jwt = request.getJwt();
-    String userId = validate(jwt);
-    WatchManager.getInstance().cancelClientWatch(userId, request.getKey());
-    responseObserver.onNext(ClientProto.WatchCancelResponse.newBuilder().setResponse(Common.RepType.OK).build());
-    responseObserver.onCompleted();
-    logger.debug("CLIENT WATCH CANCEL command processed on key:{}", request.getKey());
+    String userId = validate(request.getJwt());
+    ClientRequestHandler.getInstance().watchCancel(userId, request, responseObserver);
   }
 
   @Override
   public void watchCancelAll(ClientProto.WatchCancelAllRequest request,
                              StreamObserver<ClientProto.WatchCancelResponse> responseObserver) {
-    logger.debug("CLIENT WATCH CANCEL ALL command received");
-    String jwt = request.getJwt();
-    String userId = validate(jwt);
-    WatchManager.getInstance().cancelAllClientWatch(userId);
-    responseObserver.onNext(ClientProto.WatchCancelResponse.newBuilder().setResponse(Common.RepType.OK).build());
-    responseObserver.onCompleted();
-    logger.debug("CLIENT WATCH CANCEL ALL command processed");
+    String userId = validate(request.getJwt());
+    ClientRequestHandler.getInstance().watchCancelAll(userId, responseObserver);
   }
 
   @Override
   public void sync(ClientProto.SyncRequest request, StreamObserver<ClientProto.SyncResponse> responseObserver) {
     String jwt = request.getJwt();
     String userId = validate(jwt);
-    logger.debug("SYNC command received: userId:{}, lastSnapshotId:{}, operations:{}",
-        userId, request.getLastSnapshotId(), request.getOpsList());
-    ClientProto.SyncResponse res = null;
     if (Objects.isNull(userId)) {
-      res = ClientProto.SyncResponse.newBuilder()
-          .setSyncResponse(Common.RepType.UNRECOGNIZED).build();
-      responseObserver.onNext(res);
+      responseObserver.onNext(ClientProto.SyncResponse.newBuilder()
+          .setSyncResponse(Common.RepType.UNRECOGNIZED).build());
       responseObserver.onCompleted();
       return;
     }
-    try {
-      res = handleSync(userId, request);
-    } catch (InternalServerException e) {
-      logger.error(e.getMessage(), e);
-      responseObserver.onError(e);
-    }
-    responseObserver.onNext(res);
-    responseObserver.onCompleted();
-    WatchManager.getInstance().notifyChange(userId, request.getOpsList());
-  }
-
-  private ClientProto.SyncResponse handleSync(String userId, ClientProto.SyncRequest request)
-      throws InternalServerException {
-    try {
-      if (request.getOpsList() != null && request.getOpsList().size() > 0) {
-        return handleSyncWithUpdate(userId, request);
-      } else {
-        return handleSyncWithoutUpdate(userId, request);
-      }
-    } catch (InterruptedException e) {
-      throw new InternalServerException(e);
-    }
-  }
-
-  private ClientProto.SyncResponse handleSyncWithoutUpdate(String userId, ClientProto.SyncRequest request) throws InterruptedException {
-    ClientProto.SyncResponse.Builder resBuilder = ClientProto.SyncResponse.newBuilder();
-    //TODO: maybe it's better to retry for a limited time if it cannot acquire the lock
-    if (UserLockManager.getInstance().tryReadLock(userId, DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
-      try {
-        read(userId, request.getLastSnapshotId(), resBuilder);
-        resBuilder.setSyncResponse(Common.RepType.OK);
-        return resBuilder.build();
-      } finally {
-        UserLockManager.getInstance().releaseReadLock(userId);
-      }
-    }
-    resBuilder.setSyncResponse(Common.RepType.NOK);
-    return resBuilder.build();
-  }
-
-  private ClientProto.SyncResponse handleSyncWithUpdate(String userId, ClientProto.SyncRequest request) throws InterruptedException {
-    ClientProto.SyncResponse.Builder resBuilder = ClientProto.SyncResponse.newBuilder();
-    //TODO: maybe it's better to retry for a limited time if it cannot acquire the lock
-    if (UserLockManager.getInstance().tryWriteLock(userId, DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
-      try {
-        boolean updatesHandledSuccessfully = StorageService.getInstance().handleOperations(userId, request.getOpsList(), request.getLastSnapshotId());
-        resBuilder.setSyncResponse(updatesHandledSuccessfully ? Common.RepType.OK : Common.RepType.NOK);
-        read(userId, request.getLastSnapshotId(), resBuilder);
-        return resBuilder.build();
-      } finally {
-        UserLockManager.getInstance().releaseWriteLock(userId);
-      }
-    }
-    resBuilder.setSyncResponse(Common.RepType.NOK);
-    return resBuilder.build();
-  }
-
-  private void read(String userId, int lastSnapshotId,
-                    ClientProto.SyncResponse.Builder responseBuilder) {
-    List<Common.Operation> ops = StorageService.getInstance().get(userId, lastSnapshotId);
-    responseBuilder.addAllOps(ops);
-    if (ops.isEmpty() || ops.get(ops.size() - 1).getType() == Common.OpType.SNAPSHOT) {
-      responseBuilder.setSnapshotId(lastSnapshotId);
-    } else {
-      responseBuilder.setSnapshotId(StorageService.getInstance().snapshot(userId));
-    }
+    ClientRequestHandler.getInstance().sync(userId, request, responseObserver);
   }
 
   private String validate(String jwt) {
