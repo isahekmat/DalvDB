@@ -9,13 +9,13 @@ option java_generate_equals_and_hash = true;
 
 service BackendServer {
   rpc get (GetRequest) returns (GetResponse){}
-  rpc put (PutRequest) returns (PutResponse){}
-  rpc del (DelRequest) returns (DelResponse){}
-  rpc addToList(AddToListRequest) returns (AddToListResponse){}
-  rpc removeFromList(RemoveFromListRequest) returns (RemoveFromListResponse){}
+  rpc put (PutRequest) returns (common.Empty){}
+  rpc del (DelRequest) returns (common.Empty){}
+  rpc addToList(AddToListRequest) returns (common.Empty){}
+  rpc removeFromList(RemoveFromListRequest) returns (common.Empty){}
   rpc watch(WatchRequest) returns (stream WatchResponse){}
-  rpc watchCancel(WatchCancelRequest) returns (WatchCancelResponse){}
-  rpc watchCancelAll(common.Empty) returns (WatchCancelResponse){}
+  rpc watchCancel(WatchCancelRequest) returns (common.Empty){}
+  rpc watchCancelAll(common.Empty) returns (common.Empty){}
 }
 
 message GetRequest {
@@ -24,8 +24,7 @@ message GetRequest {
 }
 
 message GetResponse {
-  dalv.common.RepType repType = 1;
-  bytes value = 2;
+  bytes value = 1;
 }
 
 message PutRequest {
@@ -34,17 +33,9 @@ message PutRequest {
   bytes value = 3;
 }
 
-message PutResponse {
-  dalv.common.RepType repType = 1;
-}
-
 message DelRequest {
   string userId = 1;
   string key = 2;
-}
-
-message DelResponse {
-  dalv.common.RepType repType = 1;
 }
 
 message AddToListRequest {
@@ -53,18 +44,10 @@ message AddToListRequest {
   bytes value = 3;
 }
 
-message AddToListResponse {
-  dalv.common.RepType repType = 1;
-}
-
 message RemoveFromListRequest {
   string userId = 1;
   string listKey = 2;
   bytes value = 3;
-}
-
-message RemoveFromListResponse {
-  dalv.common.RepType repType = 1;
 }
 
 message WatchRequest{
@@ -78,8 +61,4 @@ message WatchResponse{
 
 message WatchCancelRequest {
   string key = 1;
-}
-
-message WatchCancelResponse {
-  common.RepType response = 1;
 }

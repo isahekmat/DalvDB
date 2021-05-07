@@ -51,18 +51,18 @@ public class ClientRequestHandler {
   }
 
   public void watchCancel(String userId, ClientProto.WatchCancelRequest request,
-                          StreamObserver<ClientProto.WatchCancelResponse> responseObserver) {
+                          StreamObserver<Common.Empty> responseObserver) {
     logger.debug("CLIENT WATCH CANCEL command received on key:{}", request.getKey());
     WatchManager.getInstance().cancelClientWatch(userId, request.getKey());
-    responseObserver.onNext(ClientProto.WatchCancelResponse.newBuilder().setResponse(Common.RepType.OK).build());
+    responseObserver.onNext(Common.Empty.newBuilder().build());
     responseObserver.onCompleted();
     logger.debug("CLIENT WATCH CANCEL command processed on key:{}", request.getKey());
   }
 
-  public void watchCancelAll(String userId, StreamObserver<ClientProto.WatchCancelResponse> responseObserver) {
+  public void watchCancelAll(String userId, StreamObserver<Common.Empty> responseObserver) {
     logger.debug("CLIENT WATCH CANCEL ALL command received");
     WatchManager.getInstance().cancelAllClientWatch(userId);
-    responseObserver.onNext(ClientProto.WatchCancelResponse.newBuilder().setResponse(Common.RepType.OK).build());
+    responseObserver.onNext(Common.Empty.newBuilder().build());
     responseObserver.onCompleted();
     logger.debug("CLIENT WATCH CANCEL ALL command processed");
   }

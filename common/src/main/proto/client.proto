@@ -12,8 +12,8 @@ option java_generate_equals_and_hash = true;
 service ClientServer {
   rpc sync (SyncRequest) returns (SyncResponse){}
   rpc watch(WatchRequest) returns (stream WatchResponse){}
-  rpc watchCancel(WatchCancelRequest) returns (WatchCancelResponse){}
-  rpc watchCancelAll(WatchCancelAllRequest) returns (WatchCancelResponse){}
+  rpc watchCancel(WatchCancelRequest) returns (common.Empty){}
+  rpc watchCancelAll(WatchCancelAllRequest) returns (common.Empty){}
 }
 
 message SyncRequest {
@@ -40,10 +40,6 @@ message WatchCancelRequest {
 
 message WatchCancelAllRequest {
   string jwt = 1;
-}
-
-message WatchCancelResponse {
-  common.RepType response = 1;
 }
 
 message WatchResponse{

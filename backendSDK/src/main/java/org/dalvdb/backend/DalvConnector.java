@@ -43,21 +43,21 @@ class DalvConnector implements Closeable {
     clientFuture = BackendServerGrpc.newStub(channel);
   }
 
-  public BackendProto.PutResponse put(String userId, String key, ByteString value) {
+  public void put(String userId, String key, ByteString value) {
     BackendProto.PutRequest request = BackendProto.PutRequest.newBuilder()
         .setUserId(userId)
         .setKey(key)
         .setValue(value)
         .build();
-    return client.put(request);
+    client.put(request);
   }
 
-  public BackendProto.DelResponse del(String userId, String key) {
+  public void del(String userId, String key) {
     BackendProto.DelRequest request = BackendProto.DelRequest.newBuilder()
         .setUserId(userId)
         .setKey(key)
         .build();
-    return client.del(request);
+    client.del(request);
   }
 
   public BackendProto.GetResponse get(String userId, String key) {
@@ -68,22 +68,22 @@ class DalvConnector implements Closeable {
     return client.get(request);
   }
 
-  public BackendProto.AddToListResponse addToList(String userId, String listKey, ByteString value) {
+  public void addToList(String userId, String listKey, ByteString value) {
     BackendProto.AddToListRequest request = BackendProto.AddToListRequest.newBuilder()
         .setUserId(userId)
         .setListKey(listKey)
         .setValue(value)
         .build();
-    return client.addToList(request);
+    client.addToList(request);
   }
 
-  public BackendProto.RemoveFromListResponse removeFromList(String userId, String listKey, ByteString value) {
+  public void removeFromList(String userId, String listKey, ByteString value) {
     BackendProto.RemoveFromListRequest request = BackendProto.RemoveFromListRequest.newBuilder()
         .setUserId(userId)
         .setListKey(listKey)
         .setValue(value)
         .build();
-    return client.removeFromList(request);
+    client.removeFromList(request);
   }
 
   public void watch(String key, StreamObserver<BackendProto.WatchResponse> responseObserver) {
@@ -92,12 +92,12 @@ class DalvConnector implements Closeable {
     clientFuture.watch(request, responseObserver);
   }
 
-  public BackendProto.WatchCancelResponse cancelAllWatch() {
-    return client.watchCancelAll(Common.Empty.newBuilder().build());
+  public void cancelAllWatch() {
+    client.watchCancelAll(Common.Empty.newBuilder().build());
   }
 
-  public BackendProto.WatchCancelResponse cancelWatch(String key){
-    return client.watchCancel(BackendProto.WatchCancelRequest.newBuilder().setKey(key).build());
+  public void cancelWatch(String key) {
+    client.watchCancel(BackendProto.WatchCancelRequest.newBuilder().setKey(key).build());
   }
 
   @Override

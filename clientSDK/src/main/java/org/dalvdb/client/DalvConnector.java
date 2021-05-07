@@ -61,19 +61,19 @@ class DalvConnector implements Closeable {
     clientNonBlocking.watch(request, observer);
   }
 
-  public ClientProto.WatchCancelResponse cancelWatch(String key) {
+  public void cancelWatch(String key) {
     ClientProto.WatchCancelRequest request = ClientProto.WatchCancelRequest.newBuilder()
         .setJwt(jwt)
         .setKey(key)
         .build();
-    return client.watchCancel(request);
+    client.watchCancel(request);
   }
 
-  public ClientProto.WatchCancelResponse cancelAllWatch() {
+  public void cancelAllWatch() {
     ClientProto.WatchCancelAllRequest request = ClientProto.WatchCancelAllRequest.newBuilder()
         .setJwt(jwt)
         .build();
-    return client.watchCancelAll(request);
+    client.watchCancelAll(request);
   }
 
   @Override

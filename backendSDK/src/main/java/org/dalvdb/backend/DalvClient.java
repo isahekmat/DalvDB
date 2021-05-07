@@ -18,7 +18,6 @@
 package org.dalvdb.backend;
 
 import com.google.protobuf.ByteString;
-import dalv.common.Common;
 import io.grpc.stub.StreamObserver;
 import org.dalvdb.common.util.ByteUtil;
 import org.dalvdb.common.watch.WatchEvent;
@@ -50,12 +49,12 @@ public class DalvClient implements Closeable {
     this.currentConnector = connectors.get(0);
   }
 
-  public boolean cancelWatch(String key) {
-    return currentConnector.cancelWatch(key).getResponse() == Common.RepType.OK;
+  public void cancelWatch(String key) {
+    currentConnector.cancelWatch(key);
   }
 
-  public boolean cancelAllWatch() {
-    return currentConnector.cancelAllWatch().getResponse() == Common.RepType.OK;
+  public void cancelAllWatch() {
+    currentConnector.cancelAllWatch();
   }
 
   public void watch(String key, Watcher watcher) {
@@ -82,18 +81,16 @@ public class DalvClient implements Closeable {
     });
   }
 
-  public boolean put(String userId, String key, byte[] value) {
-    return currentConnector.put(userId, key, ByteString.copyFrom(value)).getRepType() == Common.RepType.OK;
+  public void put(String userId, String key, byte[] value) {
+    currentConnector.put(userId, key, ByteString.copyFrom(value));
   }
 
-  public boolean del(String userId, String key) {
-    return currentConnector.del(userId, key).getRepType() == Common.RepType.OK;
+  public void del(String userId, String key) {
+    currentConnector.del(userId, key);
   }
 
   public List<byte[]> getAsList(String userId, String key) {
     BackendProto.GetResponse res = currentConnector.get(userId, key);
-    if (res.getRepType() != Common.RepType.OK)
-      return null;
     return ByteUtil.decodeList(res.getValue().toByteArray());
   }
 
@@ -103,12 +100,12 @@ public class DalvClient implements Closeable {
     return single.get(0);
   }
 
-  public boolean addToList(String userId, String listKey, byte[] value) {
-    return currentConnector.addToList(userId, listKey, ByteString.copyFrom(value)).getRepType() == Common.RepType.OK;
+  public void addToList(String userId, String listKey, byte[] value) {
+    currentConnector.addToList(userId, listKey, ByteString.copyFrom(value));
   }
 
-  public boolean removeFromList(String userId, String listKey, byte[] value) {
-    return currentConnector.removeFromList(userId, listKey, ByteString.copyFrom(value)).getRepType() == Common.RepType.OK;
+  public void removeFromList(String userId, String listKey, byte[] value) {
+    currentConnector.removeFromList(userId, listKey, ByteString.copyFrom(value));
   }
 
   @Override

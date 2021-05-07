@@ -45,22 +45,22 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
   }
 
   @Override
-  public void put(BackendProto.PutRequest request, StreamObserver<BackendProto.PutResponse> responseObserver) {
+  public void put(BackendProto.PutRequest request, StreamObserver<Common.Empty> responseObserver) {
     BackendRequestHandler.getInstance().put(request, responseObserver);
   }
 
   @Override
-  public void del(BackendProto.DelRequest request, StreamObserver<BackendProto.DelResponse> responseObserver) {
+  public void del(BackendProto.DelRequest request, StreamObserver<Common.Empty> responseObserver) {
     BackendRequestHandler.getInstance().del(request, responseObserver);
   }
 
   @Override
-  public void addToList(BackendProto.AddToListRequest request, StreamObserver<BackendProto.AddToListResponse> responseObserver) {
+  public void addToList(BackendProto.AddToListRequest request, StreamObserver<Common.Empty> responseObserver) {
     BackendRequestHandler.getInstance().addToList(request, responseObserver);
   }
 
   @Override
-  public void removeFromList(BackendProto.RemoveFromListRequest request, StreamObserver<BackendProto.RemoveFromListResponse> responseObserver) {
+  public void removeFromList(BackendProto.RemoveFromListRequest request, StreamObserver<Common.Empty> responseObserver) {
     BackendRequestHandler.getInstance().removeFromList(request, responseObserver);
   }
 
@@ -70,14 +70,12 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
   }
 
   @Override
-  public void watchCancel(BackendProto.WatchCancelRequest request,
-                          StreamObserver<BackendProto.WatchCancelResponse> responseObserver) {
+  public void watchCancel(BackendProto.WatchCancelRequest request, StreamObserver<Common.Empty> responseObserver) {
     BackendRequestHandler.getInstance().watchCancel(request, responseObserver);
   }
 
   @Override
-  public void watchCancelAll(Common.Empty request,
-                             StreamObserver<BackendProto.WatchCancelResponse> responseObserver) {
+  public void watchCancelAll(Common.Empty request, StreamObserver<Common.Empty> responseObserver) {
     BackendRequestHandler.getInstance().watchCancelAll(responseObserver);
   }
 }

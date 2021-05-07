@@ -20,7 +20,7 @@ package org.dalvdb.service.client;
 import dalv.common.Common;
 import io.grpc.stub.StreamObserver;
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.SecurityException;
+import io.jsonwebtoken.security.SignatureException;
 import org.dalvdb.DalvConfig;
 import org.dalvdb.db.ClientRequestHandler;
 import org.dalvdb.proto.ClientProto;
@@ -48,59 +48,45 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
 
   @Override
   public void watch(ClientProto.WatchRequest request, StreamObserver<ClientProto.WatchResponse> responseObserver) {
-    String userId = validate(request.getJwt());
-    ClientRequestHandler.getInstance().watch(userId, request, responseObserver);
+    String userId = validate(request.getJwt(), responseObserver);
+    if (Objects.nonNull(userId))
+      ClientRequestHandler.getInstance().watch(userId, request, responseObserver);
   }
 
   @Override
   public void watchCancel(ClientProto.WatchCancelRequest request,
-                          StreamObserver<ClientProto.WatchCancelResponse> responseObserver) {
-    String userId = validate(request.getJwt());
-    ClientRequestHandler.getInstance().watchCancel(userId, request, responseObserver);
+                          StreamObserver<Common.Empty> responseObserver) {
+    String userId = validate(request.getJwt(), responseObserver);
+    if (Objects.nonNull(userId))
+      ClientRequestHandler.getInstance().watchCancel(userId, request, responseObserver);
   }
 
   @Override
   public void watchCancelAll(ClientProto.WatchCancelAllRequest request,
-                             StreamObserver<ClientProto.WatchCancelResponse> responseObserver) {
-    String userId = validate(request.getJwt());
-    ClientRequestHandler.getInstance().watchCancelAll(userId, responseObserver);
+                             StreamObserver<Common.Empty> responseObserver) {
+    String userId = validate(request.getJwt(), responseObserver);
+    if (Objects.nonNull(userId))
+      ClientRequestHandler.getInstance().watchCancelAll(userId, responseObserver);
   }
 
   @Override
   public void sync(ClientProto.SyncRequest request, StreamObserver<ClientProto.SyncResponse> responseObserver) {
-    String jwt = request.getJwt();
-    String userId = validate(jwt);
-    if (Objects.isNull(userId)) {
-      responseObserver.onNext(ClientProto.SyncResponse.newBuilder()
-          .setSyncResponse(Common.RepType.UNRECOGNIZED).build());
-      responseObserver.onCompleted();
-      return;
-    }
-    ClientRequestHandler.getInstance().sync(userId, request, responseObserver);
+    String userId = validate(request.getJwt(), responseObserver);
+    if (Objects.nonNull(userId))
+      ClientRequestHandler.getInstance().sync(userId, request, responseObserver);
   }
 
-  private String validate(String jwt) {
+  private String validate(String jwt, StreamObserver<?> responseObserver) {
     String userId;
     try {
       Claims body = parser.parseClaimsJws(jwt).getBody();
       userId = body.get("userId", String.class);
       return userId;
-    } catch (SecurityException e) {
-      logger.warn("Invalid JWT signature.");
-      logger.trace("Invalid JWT signature trace:", e);
-    } catch (MalformedJwtException e) {
-      logger.warn("Invalid JWT token.");
-      logger.trace("Invalid JWT token trace:", e);
-    } catch (ExpiredJwtException e) {
-      logger.warn("Expired JWT token.");
-      logger.trace("Expired JWT token trace:", e);
-    } catch (UnsupportedJwtException e) {
-      logger.warn("Unsupported JWT token.");
-      logger.trace("Unsupported JWT token trace:", e);
-    } catch (IllegalArgumentException e) {
-      logger.warn("JWT token compact of handler are invalid.");
-      logger.trace("JWT token compact of handler are invalid trace: ", e);
+    } catch (UnsupportedJwtException | MalformedJwtException | SignatureException | ExpiredJwtException |
+        IllegalArgumentException | SecurityException e) {
+      logger.error("Invalid provided jwt", e);
+      responseObserver.onError(e);
+      return null;
     }
-    return null;
   }
 }

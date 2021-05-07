@@ -108,12 +108,12 @@ public class DalvClient implements Closeable {
     }
   }
 
-  public boolean cancelWatch(String key) {
-    return currentConnector.cancelWatch(key).getResponse() == Common.RepType.OK;
+  public void cancelWatch(String key) {
+    currentConnector.cancelWatch(key);
   }
 
-  public boolean cancelAllWatch() {
-    return currentConnector.cancelAllWatch().getResponse() == Common.RepType.OK;
+  public void cancelAllWatch() {
+    currentConnector.cancelAllWatch();
   }
 
   public void watch(final String key, final Watcher watcher) {
@@ -168,7 +168,7 @@ public class DalvClient implements Closeable {
               Common.Operation.newBuilder()
                   .setType(Common.OpType.DEL)
                   .setKey(k)
-              .build());
+                  .build());
         }
       } else if (!unsyncedMap.containsKey(op.getKey()))
         opsWithoutConflict.add(op);

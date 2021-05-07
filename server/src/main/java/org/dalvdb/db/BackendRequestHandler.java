@@ -45,33 +45,30 @@ public class BackendRequestHandler {
 
   public void get(BackendProto.GetRequest request, StreamObserver<BackendProto.GetResponse> responseObserver) {
     logger.debug("GET command received: userId:{} key:{}", request.getUserId(), request.getKey());
-    BackendProto.GetResponse response;
     try {
       if (UserLockManager.getInstance().tryReadLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
         try {
           ByteString value = StorageService.getInstance().getValue(request.getUserId(), request.getKey());
-          response = BackendProto.GetResponse.newBuilder()
-              .setRepType(value == null ? Common.RepType.NOK : Common.RepType.OK)
+          BackendProto.GetResponse response = BackendProto.GetResponse.newBuilder()
               .setValue(value)
               .build();
+          responseObserver.onNext(response);
+          responseObserver.onCompleted();
         } finally {
           UserLockManager.getInstance().releaseReadLock(request.getUserId());
         }
       } else
-        response = BackendProto.GetResponse.newBuilder().setRepType(Common.RepType.NOK).build();
-      responseObserver.onNext(response);
-      responseObserver.onCompleted();
+        throw new InternalServerException("could not acquire lock for this user");
     } catch (InternalServerException | InterruptedException e) {
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
     }
   }
 
-  public void put(BackendProto.PutRequest request, StreamObserver<BackendProto.PutResponse> responseObserver) {
+  public void put(BackendProto.PutRequest request, StreamObserver<Common.Empty> responseObserver) {
     try {
       logger.debug("PUT command received: userId:{} key:{}", request.getUserId(), request.getKey());
-      BackendProto.PutResponse response;
-      Common.Operation op = null;
+      Common.Operation op;
       if (UserLockManager.getInstance().tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
         try {
           op = Common.Operation.newBuilder()
@@ -80,29 +77,27 @@ public class BackendRequestHandler {
               .setVal(request.getValue())
               .build();
           StorageService.getInstance().addOperation(request.getUserId(), op);
-          response = BackendProto.PutResponse.newBuilder().setRepType(Common.RepType.OK).build();
+          responseObserver.onNext(Common.Empty.newBuilder().build());
+          responseObserver.onCompleted();
         } finally {
           UserLockManager.getInstance().releaseWriteLock(request.getUserId());
         }
       } else {
-        response = BackendProto.PutResponse.newBuilder().setRepType(Common.RepType.NOK).build();
+        throw new InternalServerException("could not acquire lock for this user");
       }
-      responseObserver.onNext(response);
-      responseObserver.onCompleted();
+
       logger.debug("PUT command processed: userId:{} key:{}", request.getUserId(), request.getKey());
-      if (response.getRepType() == Common.RepType.OK)
-        WatchManager.getInstance().notifyChange(request.getUserId(), op);
+      WatchManager.getInstance().notifyChange(request.getUserId(), op);
     } catch (InternalServerException | InterruptedException e) {
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
     }
   }
 
-  public void del(BackendProto.DelRequest request, StreamObserver<BackendProto.DelResponse> responseObserver) {
+  public void del(BackendProto.DelRequest request, StreamObserver<Common.Empty> responseObserver) {
     try {
       logger.debug("DEL command received: userId:{} key:{}", request.getUserId(), request.getKey());
-      BackendProto.DelResponse response;
-      Common.Operation op = null;
+      Common.Operation op;
       if (UserLockManager.getInstance().tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
         try {
           op = Common.Operation.newBuilder()
@@ -110,27 +105,25 @@ public class BackendRequestHandler {
               .setType(Common.OpType.DEL)
               .build();
           StorageService.getInstance().addOperation(request.getUserId(), op);
-          response = BackendProto.DelResponse.newBuilder().setRepType(Common.RepType.OK).build();
+          responseObserver.onNext(Common.Empty.newBuilder().build());
+          responseObserver.onCompleted();
         } finally {
           UserLockManager.getInstance().releaseWriteLock(request.getUserId());
         }
       } else {
-        response = BackendProto.DelResponse.newBuilder().setRepType(Common.RepType.NOK).build();
+        throw new InternalServerException("could not acquire lock for this user");
       }
-      responseObserver.onNext(response);
-      responseObserver.onCompleted();
-      if (response.getRepType() == Common.RepType.OK)
-        WatchManager.getInstance().notifyChange(request.getUserId(), op);
+
+      WatchManager.getInstance().notifyChange(request.getUserId(), op);
     } catch (InternalServerException | InterruptedException e) {
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
     }
   }
 
-  public void addToList(BackendProto.AddToListRequest request, StreamObserver<BackendProto.AddToListResponse> responseObserver) {
+  public void addToList(BackendProto.AddToListRequest request, StreamObserver<Common.Empty> responseObserver) {
     logger.debug("ADD_TO_LIST command received: userId:{} listKey:{}", request.getUserId(), request.getListKey());
-    BackendProto.AddToListResponse response;
-    Common.Operation op = null;
+    Common.Operation op;
     try {
       if (UserLockManager.getInstance().tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
         try {
@@ -140,28 +133,26 @@ public class BackendRequestHandler {
               .setVal(request.getValue())
               .build();
           StorageService.getInstance().addOperation(request.getUserId(), op);
-          response = BackendProto.AddToListResponse.newBuilder().setRepType(Common.RepType.OK).build();
+          responseObserver.onNext(Common.Empty.newBuilder().build());
+          responseObserver.onCompleted();
         } finally {
           UserLockManager.getInstance().releaseWriteLock(request.getUserId());
         }
       } else {
-        response = BackendProto.AddToListResponse.newBuilder().setRepType(Common.RepType.NOK).build();
+        throw new InternalServerException("could not acquire lock for this user");
       }
-      responseObserver.onNext(response);
-      responseObserver.onCompleted();
-      if (response.getRepType() == Common.RepType.OK)
-        WatchManager.getInstance().notifyChange(request.getUserId(), op);
+
+      WatchManager.getInstance().notifyChange(request.getUserId(), op);
     } catch (InternalServerException | InterruptedException e) {
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
     }
   }
 
-  public void removeFromList(BackendProto.RemoveFromListRequest request, StreamObserver<BackendProto.RemoveFromListResponse> responseObserver) {
+  public void removeFromList(BackendProto.RemoveFromListRequest request, StreamObserver<Common.Empty> responseObserver) {
     try {
       logger.debug("REMOVE_FROM_LIST command received: userId:{} listKey:{}", request.getUserId(), request.getListKey());
-      BackendProto.RemoveFromListResponse response;
-      Common.Operation op = null;
+      Common.Operation op;
       if (UserLockManager.getInstance().tryWriteLock(request.getUserId(), DalvConfig.getInt(DalvConfig.LOCK_TIMEOUT))) {
         try {
 
@@ -171,17 +162,15 @@ public class BackendRequestHandler {
               .setVal(request.getValue())
               .build();
           StorageService.getInstance().addOperation(request.getUserId(), op);
-          response = BackendProto.RemoveFromListResponse.newBuilder().setRepType(Common.RepType.OK).build();
+          responseObserver.onNext(Common.Empty.newBuilder().build());
+          responseObserver.onCompleted();
         } finally {
           UserLockManager.getInstance().releaseWriteLock(request.getUserId());
         }
       } else {
-        response = BackendProto.RemoveFromListResponse.newBuilder().setRepType(Common.RepType.NOK).build();
+        throw new InternalServerException("could not acquire lock for this user");
       }
-      responseObserver.onNext(response);
-      responseObserver.onCompleted();
-      if (response.getRepType() == Common.RepType.OK)
-        WatchManager.getInstance().notifyChange(request.getUserId(), op);
+      WatchManager.getInstance().notifyChange(request.getUserId(), op);
     } catch (InternalServerException | InterruptedException e) {
       logger.error(e.getMessage(), e);
       responseObserver.onError(e);
@@ -194,19 +183,18 @@ public class BackendRequestHandler {
     logger.debug("BACKEND WATCH command processed on key:{}", request.getKey());
   }
 
-  public void watchCancel(BackendProto.WatchCancelRequest request,
-                          StreamObserver<BackendProto.WatchCancelResponse> responseObserver) {
+  public void watchCancel(BackendProto.WatchCancelRequest request, StreamObserver<Common.Empty> responseObserver) {
     logger.debug("BACKEND WATCH CANCEL command received on key:{}", request.getKey());
     WatchManager.getInstance().cancelBackendWatch(request.getKey());
-    responseObserver.onNext(BackendProto.WatchCancelResponse.newBuilder().setResponse(Common.RepType.OK).build());
+    responseObserver.onNext(Common.Empty.newBuilder().build());
     responseObserver.onCompleted();
     logger.debug("BACKEND WATCH CANCEL command processed on key:{}", request.getKey());
   }
 
-  public void watchCancelAll(StreamObserver<BackendProto.WatchCancelResponse> responseObserver) {
+  public void watchCancelAll(StreamObserver<Common.Empty> responseObserver) {
     logger.debug("BACKEND WATCH CANCEL ALL command received");
     WatchManager.getInstance().cancelAllBackendWatch();
-    responseObserver.onNext(BackendProto.WatchCancelResponse.newBuilder().setResponse(Common.RepType.OK).build());
+    responseObserver.onNext(Common.Empty.newBuilder().build());
     responseObserver.onCompleted();
     logger.debug("BACKEND WATCH CANCEL ALL command processed");
   }

@@ -4,7 +4,6 @@ package dalv.common;
 enum RepType {
   OK = 0;
   NOK = 1;
-  NOT_AUTHORIZED = 2;
 }
 
 message Operation {
