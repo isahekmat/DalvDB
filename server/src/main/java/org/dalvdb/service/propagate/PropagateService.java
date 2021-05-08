@@ -15,11 +15,12 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dalvdb.service.backend;
+package org.dalvdb.service.propagate;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.dalvdb.DalvConfig;
+import org.dalvdb.service.client.ClientServerImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,21 +28,20 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-public class BackendService implements Closeable {
-  private static final Logger logger = LoggerFactory.getLogger(BackendService.class);
+public class PropagateService implements Closeable {
+  private static final Logger logger = LoggerFactory.getLogger(PropagateService.class);
   private final Server server;
 
-  public BackendService() {
-    final int port = DalvConfig.getInt(DalvConfig.BACKEND_PORT);
-    server = ServerBuilder.forPort(port)
-        .addService(BackendServerImpl.getInstance()).build();
+  public PropagateService() {
+    final int port = DalvConfig.getInt(DalvConfig.PROPAGATE_PORT);
+    server = ServerBuilder.forPort(port).addService(PropagateServerImpl.getInstance()).build();
     try {
       server.start();
     } catch (IOException e) {
-      logger.error("Backend service starting failed", e);
+      logger.error("Propagate Service starting failed", e);
       System.exit(1);
     }
-    logger.info("Backend Service started, listening on " + port);
+    logger.info("Propagate Service started, listening on " + port);
 
     new Thread(() -> {
       try {

@@ -19,34 +19,50 @@ package org.dalvdb.service.backend;
 
 import dalv.common.Common;
 import io.grpc.stub.StreamObserver;
+import org.dalvdb.cluster.Locator;
+import org.dalvdb.cluster.Router;
 import org.dalvdb.db.BackendRequestHandler;
+import org.dalvdb.exception.InvalidNodeException;
 import org.dalvdb.proto.BackendProto;
 import org.dalvdb.proto.BackendServerGrpc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase {
-  private static final Logger logger = LoggerFactory.getLogger(BackendServiceImpl.class);
-  private static BackendServiceImpl instance;
+import java.util.concurrent.CompletableFuture;
 
-  public static BackendServiceImpl getInstance() {
+public class BackendServerImpl extends BackendServerGrpc.BackendServerImplBase {
+  private static final Logger logger = LoggerFactory.getLogger(BackendServerImpl.class);
+  private static BackendServerImpl instance;
+
+  public synchronized static BackendServerImpl getInstance() {
     if (instance == null) {
-      instance = new BackendServiceImpl();
+      instance = new BackendServerImpl();
     }
     return instance;
   }
 
-  private BackendServiceImpl() {
+  private BackendServerImpl() {
   }
 
   @Override
   public void get(BackendProto.GetRequest request, StreamObserver<BackendProto.GetResponse> responseObserver) {
-    BackendRequestHandler.getInstance().get(request, responseObserver);
+    if (isLocal(request.getUserId(), responseObserver))
+      BackendRequestHandler.getInstance().get(request, responseObserver);
   }
 
   @Override
   public void put(BackendProto.PutRequest request, StreamObserver<Common.Empty> responseObserver) {
-    BackendRequestHandler.getInstance().put(request, responseObserver);
+    if (!isLocal(request.getUserId(), responseObserver))
+      return;
+    Router router = Router.getInstance();
+    CompletableFuture<Void> replicated = router.propagate(request.getUserId(), Common.Operation.newBuilder()
+        .setType(Common.OpType.PUT)
+        .setKey(request.getKey())
+        .setVal(request.getValue()).build());
+    replicated.thenRun(() -> {
+      BackendRequestHandler.getInstance().put(request, responseObserver);
+      router.commit(request.getUserId());
+    });
   }
 
   @Override
@@ -78,4 +94,17 @@ public class BackendServiceImpl extends BackendServerGrpc.BackendServerImplBase 
   public void watchCancelAll(Common.Empty request, StreamObserver<Common.Empty> responseObserver) {
     BackendRequestHandler.getInstance().watchCancelAll(responseObserver);
   }
+
+
+  private boolean isLocal(String userId, StreamObserver<?> responseObserver) {
+    Locator locator = Locator.getInstance();
+    String location = locator.locate(userId);
+
+    if (!locator.me.equals(location)) {
+      responseObserver.onError(new InvalidNodeException(location));
+      return false;
+    }
+    return true;
+  }
+
 }

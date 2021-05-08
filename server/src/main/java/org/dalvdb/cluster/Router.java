@@ -17,37 +17,22 @@
 
 package org.dalvdb.cluster;
 
+import dalv.common.Common;
 import org.dalvdb.DalvConfig;
 
-import java.io.Closeable;
-import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
-public interface Locator extends Closeable {
+public interface Router {
   boolean singleton = DalvConfig.getBoolean(DalvConfig.SINGLETON_MODE);
-  String me = DalvConfig.getStr(DalvConfig.NODE_ID);
 
-  static Locator getInstance() {
+  static Router getInstance() {
     if (singleton)
-      return SingleNodeLocator.getInstance();
+      return LocalRouter.getInstance();
     else
-      return SingleDCClusterLocator.getInstance();
+      return PropagateRouter.getInstance();
   }
 
-  /**
-   * determine if the key is related to the current server or not
-   *
-   * @param key the user id
-   * @return is the key related to the current server or not
-   */
-  boolean isLocal(String key);
+  CompletableFuture<Void> propagate(String userId, Common.Operation op);
 
-  /**
-   * Return the address of server which is responsible for handling this key
-   *
-   * @param key the user id
-   * @return address of server responsible for handling this key
-   */
-  String locate(String key);
-
-  List<Node> replicas(String key);
+  void commit(String userId);
 }

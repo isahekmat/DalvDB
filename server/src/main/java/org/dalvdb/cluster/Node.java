@@ -17,13 +17,42 @@
 
 package org.dalvdb.cluster;
 
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
+import java.util.Objects;
 
-public class ZKWatcher implements Watcher {
+public class Node {
+  private final String host;
+  private final int port;
+  private final int ringPosition;
+
+  public Node(String host, int port, int ringPosition) {
+    this.host = host;
+    this.port = port;
+    this.ringPosition = ringPosition;
+  }
+
+  public String getHost() {
+    return host;
+  }
+
+  public int getPort() {
+    return port;
+  }
+
+  public int getRingPosition() {
+    return ringPosition;
+  }
+
   @Override
-  public void process(WatchedEvent watchedEvent) {
-    System.out.println(watchedEvent);
-    //TODO
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    Node node = (Node) o;
+    return port == node.port &&
+        host.equals(node.host);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(host, port);
   }
 }

@@ -15,42 +15,16 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dalvdb.cluster;
+package org.dalvdb.exception;
 
-import org.dalvdb.DalvConfig;
+public class InvalidNodeException extends Throwable {
+  private final String location;
 
-import java.util.Collections;
-import java.util.List;
-
-public class SingleNodeLocator implements Locator {
-  private static SingleNodeLocator instance;
-
-  public synchronized static SingleNodeLocator getInstance() {
-    if (instance == null) {
-      instance = new SingleNodeLocator();
-    }
-    return instance;
+  public InvalidNodeException(String location) {
+    this.location = location;
   }
 
-  private SingleNodeLocator() {
-  }
-
-  @Override
-  public boolean isLocal(String key) {
-    return true;
-  }
-
-  @Override
-  public String locate(String key) {
-    return DalvConfig.getStr(DalvConfig.NODE_ID);
-  }
-
-  @Override
-  public List<Node> replicas(String key) {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public void close() {
+  public String getLocation() {
+    return location;
   }
 }

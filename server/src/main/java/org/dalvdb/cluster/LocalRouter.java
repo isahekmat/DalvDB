@@ -17,43 +17,32 @@
 
 package org.dalvdb.cluster;
 
-import org.dalvdb.DalvConfig;
+import dalv.common.Common;
 
-import java.io.IOException;
-import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
-public class SingleDCClusterLocator implements Locator {
-  private static SingleDCClusterLocator instance;
-  private final String nodeId;
+public class LocalRouter implements Router {
+  private static LocalRouter instance;
 
-  public synchronized static SingleDCClusterLocator getInstance() {
+  public synchronized static LocalRouter getInstance() {
     if (instance == null) {
-      instance = new SingleDCClusterLocator();
+      instance = new LocalRouter();
     }
     return instance;
   }
 
-  private SingleDCClusterLocator() {
-    this.nodeId = DalvConfig.getStr(DalvConfig.NODE_ID);
+  private LocalRouter() {
   }
 
   @Override
-  public boolean isLocal(String key) {
-    return nodeId.equals(locate(key));
+  public CompletableFuture<Void> propagate(String userId, Common.Operation op) {
+    CompletableFuture<Void> ret = new CompletableFuture<>();
+    ret.complete(null);
+    return ret;
   }
 
   @Override
-  public String locate(String key) {
-    return ClusterRing.getInstance().leaderOf(key);
-  }
-
-  @Override
-  public List<Node> replicas(String key) {
-    return ClusterRing.getInstance().replicas(key);
-  }
-
-  @Override
-  public void close() throws IOException {
-    ClusterRing.getInstance().close();
+  public void commit(String userId) {
+    //TODO
   }
 }

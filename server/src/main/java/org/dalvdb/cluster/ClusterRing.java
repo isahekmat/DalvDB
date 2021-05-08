@@ -41,7 +41,7 @@ public class ClusterRing implements Closeable, Watcher {
   private final static byte[] RUNNING = "running".getBytes();
   private final String nodeId;
 
-  public static ClusterRing getInstance() {
+  public synchronized static ClusterRing getInstance() {
     if (instance == null) {
       instance = new ClusterRing();
     }
@@ -120,5 +120,11 @@ public class ClusterRing implements Closeable, Watcher {
 
   public String leaderOf(String key) {
     return "";
+    //TODO
+  }
+
+  public List<Node> replicas(String key) {
+    //TODO
+    return null;
   }
 }

@@ -15,45 +15,35 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dalvdb.cluster;
+package org.dalvdb.service.propagate;
 
-import org.dalvdb.DalvConfig;
+import dalv.common.Common;
+import io.grpc.stub.StreamObserver;
+import org.dalvdb.proto.PropagateProto;
+import org.dalvdb.proto.PropagateServiceGrpc;
 
-import java.io.IOException;
-import java.util.List;
+public class PropagateServerImpl extends PropagateServiceGrpc.PropagateServiceImplBase {
+  private static PropagateServerImpl instance;
 
-public class SingleDCClusterLocator implements Locator {
-  private static SingleDCClusterLocator instance;
-  private final String nodeId;
-
-  public synchronized static SingleDCClusterLocator getInstance() {
+  public synchronized static PropagateServerImpl getInstance() {
     if (instance == null) {
-      instance = new SingleDCClusterLocator();
+      instance = new PropagateServerImpl();
     }
     return instance;
   }
 
-  private SingleDCClusterLocator() {
-    this.nodeId = DalvConfig.getStr(DalvConfig.NODE_ID);
+  private PropagateServerImpl() {
   }
 
   @Override
-  public boolean isLocal(String key) {
-    return nodeId.equals(locate(key));
+  public void propagate(PropagateProto.PropagateRequest request, StreamObserver<PropagateProto.PropagateAck> responseObserver) {
+    super.propagate(request, responseObserver);
+    //TODO
   }
 
   @Override
-  public String locate(String key) {
-    return ClusterRing.getInstance().leaderOf(key);
-  }
-
-  @Override
-  public List<Node> replicas(String key) {
-    return ClusterRing.getInstance().replicas(key);
-  }
-
-  @Override
-  public void close() throws IOException {
-    ClusterRing.getInstance().close();
+  public StreamObserver<PropagateProto.CommitRequest> commit(StreamObserver<Common.Empty> responseObserver) {
+    //TODO
+    return super.commit(responseObserver);
   }
 }

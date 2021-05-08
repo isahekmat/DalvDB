@@ -38,11 +38,12 @@ public final class DalvConfig {
   public static final String SINGLETON_MODE = "singleton.mode";
   public static final String ZK_CONNECTION_STRING = "zk.connection";
   public static final String ZK_SESSION_TIMEOUT = "zk.sessionTimeout";
-  public static final String CLIENT_PORT = "client.port";
   public static final String JWT_SIGN = "jwt.signature";
   public static final String LOCK_TIMEOUT = "lock.timeout";
   public static final String LOCK_SIZE_THRESHOLD = "lock.size.threshold";
+  public static final String CLIENT_PORT = "client.port";
   public static final String BACKEND_PORT = "backend.port";
+  public static final String PROPAGATE_PORT = "propagate.port";
   public static final String WATCHER_THREAD_NUM = "watcher.thread.num";
   public static final String COMPACTION_DELAY = "compaction.delay";
   public static final String COMPACTION_INTERVAL = "compaction.interval";
@@ -59,11 +60,12 @@ public final class DalvConfig {
     config.put(DATA_DIR, ".dalv-data/");
     config.put(ZK_CONNECTION_STRING, "localhost:2181");
     config.put(ZK_SESSION_TIMEOUT, 10000);
-    config.put(CLIENT_PORT, 7472);
     config.put(JWT_SIGN, "havijfarangichekhoobehavijfarangichekhoobehavijfarangichekhoobe");
     config.put(LOCK_TIMEOUT, 20);
     config.put(LOCK_SIZE_THRESHOLD, 200);
+    config.put(CLIENT_PORT, 7472);
     config.put(BACKEND_PORT, 7470);
+    config.put(PROPAGATE_PORT, 7475);
     config.put(WATCHER_THREAD_NUM, 8);
     config.put(COMPACTION_DELAY, 10L);
     config.put(COMPACTION_INTERVAL, 10L);

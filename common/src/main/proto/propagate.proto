@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+import "common.proto";
+
+package dalv.propagate;
+
+option java_package = "org.dalvdb.proto";
+option java_outer_classname = "PropagateProto";
+option java_generate_equals_and_hash = true;
+
+service PropagateService {
+  rpc propagate(PropagateRequest) returns (PropagateAck){}
+  rpc commit(stream CommitRequest) returns (common.Empty){}
+}
+
+message PropagateRequest{
+  string userId = 1;
+  common.Operation op = 2;
+  uint64 opId = 3;
+}
+
+message PropagateAck{
+  string userId = 1;
+  uint64 opId = 2;
+}
+
+message CommitRequest{
+  string userId = 1;
+  uint64 lastCommitedId = 2;
+}
