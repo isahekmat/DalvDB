@@ -36,7 +36,7 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
   private final JwtParser parser = Jwts.parserBuilder()
       .setSigningKey(DalvConfig.getStr(DalvConfig.JWT_SIGN)).build();
 
-  public static synchronized ClientServerImpl getInstance() {
+  public synchronized static ClientServerImpl getInstance() {
     if (instance == null) {
       instance = new ClientServerImpl();
     }

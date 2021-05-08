@@ -33,7 +33,7 @@ public class BackendRequestHandler {
   private static final Logger logger = LoggerFactory.getLogger(BackendRequestHandler.class);
   private static BackendRequestHandler instance;
 
-  public static synchronized BackendRequestHandler getInstance() {
+  public synchronized static BackendRequestHandler getInstance() {
     if (instance == null) {
       instance = new BackendRequestHandler();
     }

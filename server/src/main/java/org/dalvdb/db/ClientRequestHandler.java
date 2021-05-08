@@ -34,7 +34,7 @@ public class ClientRequestHandler {
   private static final Logger logger = LoggerFactory.getLogger(ClientRequestHandler.class);
   private static ClientRequestHandler instance;
 
-  public static synchronized ClientRequestHandler getInstance() {
+  public synchronized static ClientRequestHandler getInstance() {
     if (instance == null) {
       instance = new ClientRequestHandler();
     }

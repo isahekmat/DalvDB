@@ -46,7 +46,7 @@ public class RocksStorageService implements StorageService {
   private final ColumnFamilyHandle metaData;
   private final CompactionScheduler compactionScheduler;
 
-  public static synchronized RocksStorageService getInstance() {
+  public synchronized static RocksStorageService getInstance() {
     if (instance == null) {
       instance = new RocksStorageService();
     }

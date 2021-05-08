@@ -53,7 +53,7 @@ public class UserLockManager {
    *
    * @return the singleton instance
    */
-  public static synchronized UserLockManager getInstance() {
+  public synchronized static UserLockManager getInstance() {
     if (instance == null) {
       instance = new UserLockManager(DalvConfig.getInt(DalvConfig.LOCK_SIZE_THRESHOLD));
     }

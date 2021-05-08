@@ -42,7 +42,7 @@ public class InMemoryWatchManager implements WatchManager {
   private final ExecutorService watcherExecutor = Executors.newFixedThreadPool(
       DalvConfig.getInt(DalvConfig.WATCHER_THREAD_NUM));
 
-  public static synchronized InMemoryWatchManager getInstance() {
+  public synchronized static InMemoryWatchManager getInstance() {
     if (instance == null) {
       instance = new InMemoryWatchManager();
     }
