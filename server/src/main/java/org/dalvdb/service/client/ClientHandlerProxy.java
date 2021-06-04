@@ -22,7 +22,7 @@ import io.grpc.stub.StreamObserver;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SignatureException;
 import org.dalvdb.DalvConfig;
-import org.dalvdb.db.ClientRequestHandler;
+import org.dalvdb.db.ClientHandler;
 import org.dalvdb.proto.ClientProto;
 import org.dalvdb.proto.ClientServerGrpc;
 import org.slf4j.Logger;
@@ -30,27 +30,27 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 
-public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
-  private static final Logger logger = LoggerFactory.getLogger(ClientServerImpl.class);
-  private static ClientServerImpl instance;
+public class ClientHandlerProxy extends ClientServerGrpc.ClientServerImplBase {
+  private static final Logger logger = LoggerFactory.getLogger(ClientHandlerProxy.class);
+  private static ClientHandlerProxy instance;
   private final JwtParser parser = Jwts.parserBuilder()
       .setSigningKey(DalvConfig.getStr(DalvConfig.JWT_SIGN)).build();
 
-  public synchronized static ClientServerImpl getInstance() {
+  public synchronized static ClientHandlerProxy getInstance() {
     if (instance == null) {
-      instance = new ClientServerImpl();
+      instance = new ClientHandlerProxy();
     }
     return instance;
   }
 
-  private ClientServerImpl() {
+  private ClientHandlerProxy() {
   }
 
   @Override
   public void watch(ClientProto.WatchRequest request, StreamObserver<ClientProto.WatchResponse> responseObserver) {
     String userId = validate(request.getJwt(), responseObserver);
     if (Objects.nonNull(userId))
-      ClientRequestHandler.getInstance().watch(userId, request, responseObserver);
+      ClientHandler.getInstance().watch(userId, request, responseObserver);
   }
 
   @Override
@@ -58,7 +58,7 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
                           StreamObserver<Common.Empty> responseObserver) {
     String userId = validate(request.getJwt(), responseObserver);
     if (Objects.nonNull(userId))
-      ClientRequestHandler.getInstance().watchCancel(userId, request, responseObserver);
+      ClientHandler.getInstance().watchCancel(userId, request, responseObserver);
   }
 
   @Override
@@ -66,14 +66,14 @@ public class ClientServerImpl extends ClientServerGrpc.ClientServerImplBase {
                              StreamObserver<Common.Empty> responseObserver) {
     String userId = validate(request.getJwt(), responseObserver);
     if (Objects.nonNull(userId))
-      ClientRequestHandler.getInstance().watchCancelAll(userId, responseObserver);
+      ClientHandler.getInstance().watchCancelAll(userId, responseObserver);
   }
 
   @Override
   public void sync(ClientProto.SyncRequest request, StreamObserver<ClientProto.SyncResponse> responseObserver) {
     String userId = validate(request.getJwt(), responseObserver);
     if (Objects.nonNull(userId))
-      ClientRequestHandler.getInstance().sync(userId, request, responseObserver);
+      ClientHandler.getInstance().sync(userId, request, responseObserver);
   }
 
   private String validate(String jwt, StreamObserver<?> responseObserver) {

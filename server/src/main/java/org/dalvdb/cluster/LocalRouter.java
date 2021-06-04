@@ -43,6 +43,5 @@ public class LocalRouter implements Router {
 
   @Override
   public void commit(String userId) {
-    //TODO
   }
 }

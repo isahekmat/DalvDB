@@ -33,7 +33,7 @@ public class ClientService implements Closeable {
 
   public ClientService() {
     final int port = DalvConfig.getInt(DalvConfig.CLIENT_PORT);
-    server = ServerBuilder.forPort(port).addService(ClientServerImpl.getInstance()).build();
+    server = ServerBuilder.forPort(port).addService(ClientHandlerProxy.getInstance()).build();
     try {
       server.start();
     } catch (IOException e) {

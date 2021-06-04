@@ -20,6 +20,7 @@ package org.dalvdb.cluster;
 import dalv.common.Common;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
 import org.dalvdb.proto.PropagateProto;
 import org.dalvdb.proto.PropagateServiceGrpc;
 
@@ -35,7 +36,7 @@ public class PropagateRouter implements Router {
   private final Map<Node, Replicator> replicas;
   private final Map<String, AtomicInteger> opIds;
   private final Map<String, SortedMap<Integer, CompletableFuture<Void>>> futures;
-
+  private final Map<String, AtomicInteger> lastCommitted;
   private final ExecutorService responseExecutor;
 
   public synchronized static PropagateRouter getInstance() {
@@ -48,6 +49,7 @@ public class PropagateRouter implements Router {
   private PropagateRouter() {
     replicas = new ConcurrentHashMap<>();
     opIds = new ConcurrentHashMap<>();
+    lastCommitted = new ConcurrentHashMap<>();
 
     //TODO: should split of for each user: Map<userId, SortedMap<OpId,CompletableFuture>>
     futures = new ConcurrentHashMap<>();
@@ -73,11 +75,16 @@ public class PropagateRouter implements Router {
 
   @Override
   public void commit(String userId) {
-
+    Locator locator = Locator.getInstance();
+    List<Node> nodes = locator.replicas(userId);
+    for (Node node : nodes) {
+      replicas.get(node).commit(userId, lastCommitted.get(userId).get());
+    }
   }
 
   private class Replicator {
     private PropagateServiceGrpc.PropagateServiceFutureStub client;
+    private StreamObserver<PropagateProto.CommitRequest> commitStream;
     private ManagedChannel channel;
     private Node node;
 
@@ -86,6 +93,19 @@ public class PropagateRouter implements Router {
       channel = ManagedChannelBuilder.forAddress(node.getHost(), node.getPort())
           .usePlaintext().build();
       client = PropagateServiceGrpc.newFutureStub(channel);
+      commitStream = PropagateServiceGrpc.newStub(channel).commit(new StreamObserver<>() {
+        @Override
+        public void onNext(Common.Empty value) {
+        }
+
+        @Override
+        public void onError(Throwable t) {
+        }
+
+        @Override
+        public void onCompleted() {
+        }
+      });
     }
 
     public void replicate(String userId, Common.Operation op, int opId) {
@@ -96,11 +116,27 @@ public class PropagateRouter implements Router {
           .build();
 
       client.propagate(req).addListener(() -> futures.get(userId).headMap(opId).forEach((e, c) -> {
+        //TODO: assume that the replication factor is 3 so the first response received means that the operation should
+        // be committed
         c.complete(null);
         futures.get(userId).remove(e);
+        lastCommitted.computeIfAbsent(userId, s -> new AtomicInteger(opId));
+        do {
+          int last = lastCommitted.get(userId).get();
+          if (last < opId) {
+            if (lastCommitted.get(userId).compareAndSet(last, opId))
+              break;
+          } else break;
+        } while (true);
       }), responseExecutor);
+    }
 
+    public void commit(String userId, int lastCommittedOpId) {
+      commitStream.onNext(PropagateProto.CommitRequest.newBuilder()
+          .setUserId(userId)
+          .setLastCommitedId(lastCommittedOpId)
+          .build());
     }
   }
-
 }
+

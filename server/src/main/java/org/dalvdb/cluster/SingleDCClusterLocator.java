@@ -17,14 +17,11 @@
 
 package org.dalvdb.cluster;
 
-import org.dalvdb.DalvConfig;
-
 import java.io.IOException;
 import java.util.List;
 
 public class SingleDCClusterLocator implements Locator {
   private static SingleDCClusterLocator instance;
-  private final String nodeId;
 
   public synchronized static SingleDCClusterLocator getInstance() {
     if (instance == null) {
@@ -34,12 +31,6 @@ public class SingleDCClusterLocator implements Locator {
   }
 
   private SingleDCClusterLocator() {
-    this.nodeId = DalvConfig.getStr(DalvConfig.NODE_ID);
-  }
-
-  @Override
-  public boolean isLocal(String key) {
-    return nodeId.equals(locate(key));
   }
 
   @Override

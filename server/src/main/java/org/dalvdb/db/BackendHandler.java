@@ -29,18 +29,18 @@ import org.dalvdb.watch.WatchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BackendRequestHandler {
-  private static final Logger logger = LoggerFactory.getLogger(BackendRequestHandler.class);
-  private static BackendRequestHandler instance;
+public class BackendHandler {
+  private static final Logger logger = LoggerFactory.getLogger(BackendHandler.class);
+  private static BackendHandler instance;
 
-  public synchronized static BackendRequestHandler getInstance() {
+  public synchronized static BackendHandler getInstance() {
     if (instance == null) {
-      instance = new BackendRequestHandler();
+      instance = new BackendHandler();
     }
     return instance;
   }
 
-  private BackendRequestHandler() {
+  private BackendHandler() {
   }
 
   public void get(BackendProto.GetRequest request, StreamObserver<BackendProto.GetResponse> responseObserver) {

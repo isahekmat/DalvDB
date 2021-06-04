@@ -21,7 +21,7 @@ import dalv.common.Common;
 import io.grpc.stub.StreamObserver;
 import org.dalvdb.cluster.Locator;
 import org.dalvdb.cluster.Router;
-import org.dalvdb.db.BackendRequestHandler;
+import org.dalvdb.db.BackendHandler;
 import org.dalvdb.exception.InvalidNodeException;
 import org.dalvdb.proto.BackendProto;
 import org.dalvdb.proto.BackendServerGrpc;
@@ -30,24 +30,24 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 
-public class BackendServerImpl extends BackendServerGrpc.BackendServerImplBase {
-  private static final Logger logger = LoggerFactory.getLogger(BackendServerImpl.class);
-  private static BackendServerImpl instance;
+public class BackendHandlerProxy extends BackendServerGrpc.BackendServerImplBase {
+  private static final Logger logger = LoggerFactory.getLogger(BackendHandlerProxy.class);
+  private static BackendHandlerProxy instance;
 
-  public synchronized static BackendServerImpl getInstance() {
+  public synchronized static BackendHandlerProxy getInstance() {
     if (instance == null) {
-      instance = new BackendServerImpl();
+      instance = new BackendHandlerProxy();
     }
     return instance;
   }
 
-  private BackendServerImpl() {
+  private BackendHandlerProxy() {
   }
 
   @Override
   public void get(BackendProto.GetRequest request, StreamObserver<BackendProto.GetResponse> responseObserver) {
     if (isLocal(request.getUserId(), responseObserver))
-      BackendRequestHandler.getInstance().get(request, responseObserver);
+      BackendHandler.getInstance().get(request, responseObserver);
   }
 
   @Override
@@ -60,39 +60,39 @@ public class BackendServerImpl extends BackendServerGrpc.BackendServerImplBase {
         .setKey(request.getKey())
         .setVal(request.getValue()).build());
     replicated.thenRun(() -> {
-      BackendRequestHandler.getInstance().put(request, responseObserver);
+      BackendHandler.getInstance().put(request, responseObserver);
       router.commit(request.getUserId());
     });
   }
 
   @Override
   public void del(BackendProto.DelRequest request, StreamObserver<Common.Empty> responseObserver) {
-    BackendRequestHandler.getInstance().del(request, responseObserver);
+    BackendHandler.getInstance().del(request, responseObserver);
   }
 
   @Override
   public void addToList(BackendProto.AddToListRequest request, StreamObserver<Common.Empty> responseObserver) {
-    BackendRequestHandler.getInstance().addToList(request, responseObserver);
+    BackendHandler.getInstance().addToList(request, responseObserver);
   }
 
   @Override
   public void removeFromList(BackendProto.RemoveFromListRequest request, StreamObserver<Common.Empty> responseObserver) {
-    BackendRequestHandler.getInstance().removeFromList(request, responseObserver);
+    BackendHandler.getInstance().removeFromList(request, responseObserver);
   }
 
   @Override
   public void watch(BackendProto.WatchRequest request, StreamObserver<BackendProto.WatchResponse> responseObserver) {
-    BackendRequestHandler.getInstance().watch(request, responseObserver);
+    BackendHandler.getInstance().watch(request, responseObserver);
   }
 
   @Override
   public void watchCancel(BackendProto.WatchCancelRequest request, StreamObserver<Common.Empty> responseObserver) {
-    BackendRequestHandler.getInstance().watchCancel(request, responseObserver);
+    BackendHandler.getInstance().watchCancel(request, responseObserver);
   }
 
   @Override
   public void watchCancelAll(Common.Empty request, StreamObserver<Common.Empty> responseObserver) {
-    BackendRequestHandler.getInstance().watchCancelAll(responseObserver);
+    BackendHandler.getInstance().watchCancelAll(responseObserver);
   }
 
 

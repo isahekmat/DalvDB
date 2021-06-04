@@ -19,7 +19,7 @@ package org.dalvdb.cluster;
 
 import java.util.Objects;
 
-public class Node {
+public class Node implements Comparable<Node> {
   private final String host;
   private final int port;
   private final int ringPosition;
@@ -54,5 +54,10 @@ public class Node {
   @Override
   public int hashCode() {
     return Objects.hash(host, port);
+  }
+
+  @Override
+  public int compareTo(Node o) {
+    return this.ringPosition - o.ringPosition;
   }
 }

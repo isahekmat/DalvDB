@@ -34,7 +34,7 @@ public class BackendService implements Closeable {
   public BackendService() {
     final int port = DalvConfig.getInt(DalvConfig.BACKEND_PORT);
     server = ServerBuilder.forPort(port)
-        .addService(BackendServerImpl.getInstance()).build();
+        .addService(BackendHandlerProxy.getInstance()).build();
     try {
       server.start();
     } catch (IOException e) {

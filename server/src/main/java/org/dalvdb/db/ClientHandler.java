@@ -30,18 +30,18 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-public class ClientRequestHandler {
-  private static final Logger logger = LoggerFactory.getLogger(ClientRequestHandler.class);
-  private static ClientRequestHandler instance;
+public class ClientHandler {
+  private static final Logger logger = LoggerFactory.getLogger(ClientHandler.class);
+  private static ClientHandler instance;
 
-  public synchronized static ClientRequestHandler getInstance() {
+  public synchronized static ClientHandler getInstance() {
     if (instance == null) {
-      instance = new ClientRequestHandler();
+      instance = new ClientHandler();
     }
     return instance;
   }
 
-  private ClientRequestHandler() {
+  private ClientHandler() {
   }
 
   public void watch(String userId, ClientProto.WatchRequest request, StreamObserver<ClientProto.WatchResponse> responseObserver) {

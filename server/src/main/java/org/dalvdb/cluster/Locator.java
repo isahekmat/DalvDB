@@ -34,14 +34,6 @@ public interface Locator extends Closeable {
   }
 
   /**
-   * determine if the key is related to the current server or not
-   *
-   * @param key the user id
-   * @return is the key related to the current server or not
-   */
-  boolean isLocal(String key);
-
-  /**
    * Return the address of server which is responsible for handling this key
    *
    * @param key the user id

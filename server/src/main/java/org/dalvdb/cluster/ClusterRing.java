@@ -28,18 +28,22 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeSet;
 
 public class ClusterRing implements Closeable, Watcher {
   private static final Logger logger = LoggerFactory.getLogger(ClusterRing.class);
   private static ClusterRing instance;
 
-  private final ZooKeeper zk;
   private final static String BASE_PATH = "/dalv";
   private final static String NODE_PATH = BASE_PATH + "/node";
   private final static String RING_PATH = BASE_PATH + "/ring";
   private final static byte[] BOOTSTRAP = "bootstrap".getBytes();
   private final static byte[] RUNNING = "running".getBytes();
+
+  private final ZooKeeper zk;
   private final String nodeId;
+
+  private final TreeSet<Node> nodes = new TreeSet<>();
 
   public synchronized static ClusterRing getInstance() {
     if (instance == null) {

@@ -20,7 +20,6 @@ package org.dalvdb.service.propagate;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.dalvdb.DalvConfig;
-import org.dalvdb.service.client.ClientServerImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
