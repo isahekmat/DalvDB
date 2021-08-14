@@ -46,3 +46,6 @@ You can find full documentation [here](docs/doc_home.md)
 Copyright 2020-present Isa Hekmatizadeh
 
 Licensed under the AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+
+## Clustring (In-progress)
+Clustring is currently under heavy development, you can find related code under 'cluster' branch
