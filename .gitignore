@@ -5,12 +5,8 @@ target/
 .dalv-data/
 .client-data/
 dalv.log
-/bazel-bin/
-/bazel-DalvDB/
-/bazel-out/
-/bazel-testlogs/
-bazel-bin/
+.vscode/
 bazel-DalvDB/
+bazel-bin/
 bazel-out/
 bazel-testlogs/
-.vscode/
