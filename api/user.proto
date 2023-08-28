@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package dalv.api;
+
+import "api/common.proto";
+
+service UserService {
+  rpc sync (SyncRequest) returns (SyncResponse){}
+  rpc watch(WatchRequest) returns (stream WatchResponse){}
+  rpc watchCancel(WatchCancelRequest) returns (WatchCancelResponse){}
+  rpc watchCancelAll(WatchCancelAllRequest) returns (WatchCancelResponse){}
+}
+
+message SyncRequest {
+  SecurityToken token  = 1;
+  repeated Operation ops = 2;
+  uint32 lastSnapshotId = 3;
+}
+
+message SyncResponse {
+  RepType syncResponse = 1;
+  uint32 snapshotId = 2;
+  repeated Operation ops = 3;
+}
+
+message WatchRequest{
+  SecurityToken token = 1;
+  string key = 2;
+}
+
+message WatchCancelRequest {
+  SecurityToken token = 1;
+  string key = 2;
+}
+
+message WatchCancelAllRequest {
+  SecurityToken token = 1;
+}
+
+message WatchCancelResponse {
+  RepType response = 1;
+}
+
+message WatchResponse{
+  Operation operation = 1;
+}

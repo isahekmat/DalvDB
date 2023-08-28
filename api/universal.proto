@@ -1,0 +1,82 @@
+syntax = "proto3";
+import "api/common.proto";
+
+package dalv.api;
+
+
+service UniversalService {
+  rpc get (GetRequest) returns (GetResponse){}
+  rpc put (PutRequest) returns (PutResponse){}
+  rpc del (DelRequest) returns (DelResponse){}
+  rpc addToList(AddToListRequest) returns (AddToListResponse){}
+  rpc removeFromList(RemoveFromListRequest) returns (RemoveFromListResponse){}
+  rpc watch(WatchRequest) returns (stream WatchResponse){}
+  rpc watchCancel(WatchCancelRequest) returns (WatchCancelResponse){}
+  rpc watchCancelAll(Empty) returns (WatchCancelResponse){}
+}
+
+message GetRequest {
+  string userId = 1;
+  string key = 2;
+}
+
+message GetResponse {
+  RepType repType = 1;
+  bytes value = 2;
+}
+
+message PutRequest {
+  string userId = 1;
+  string key = 2;
+  bytes value = 3;
+}
+
+message PutResponse {
+  RepType repType = 1;
+}
+
+message DelRequest {
+  string userId = 1;
+  string key = 2;
+}
+
+message DelResponse {
+  RepType repType = 1;
+}
+
+message AddToListRequest {
+  string userId = 1;
+  string listKey = 2;
+  bytes value = 3;
+}
+
+message AddToListResponse {
+  RepType repType = 1;
+}
+
+message RemoveFromListRequest {
+  string userId = 1;
+  string listKey = 2;
+  bytes value = 3;
+}
+
+message RemoveFromListResponse {
+  RepType repType = 1;
+}
+
+message WatchRequest{
+  string key = 1;
+}
+
+message WatchResponse{
+  string userId = 1;
+  Operation operation = 2;
+}
+
+message WatchCancelRequest {
+  string key = 1;
+}
+
+message WatchCancelResponse {
+  RepType response = 1;
+}
