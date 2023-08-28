@@ -6,7 +6,4 @@ target/
 .client-data/
 dalv.log
 .vscode/
-bazel-DalvDB/
-bazel-bin/
-bazel-out/
-bazel-testlogs/
+bazel-*
